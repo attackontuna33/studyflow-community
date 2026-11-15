@@ -238,6 +238,12 @@ async function afterLogin(u){
  const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
  if(error)throw error;profile=data;
  showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;renderMyAvatar();
+ const savedView=localStorage.getItem("studyflow_active_view");
+ const targetView=savedView&&$(savedView)?savedView:"home";
+ document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===targetView));
+ document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===targetView));
+ const activeButton=document.querySelector('.nav button[data-view="'+targetView+'"]');
+ if(activeButton)$("pageTitle").textContent=activeButton.textContent.trim();
  await loadFriends();await refreshDashboard();await loadCourses();startPresence();await loadChatMessages();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
@@ -607,6 +613,7 @@ function stopPresence(){
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
+ localStorage.setItem("studyflow_active_view",b.dataset.view);
  $("pageTitle").textContent=b.textContent.trim();
  if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
  if(b.dataset.view==="chat"){
