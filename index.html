@@ -321,11 +321,13 @@ function renderCourses(){
  if(!visible.length){$("courseProgress").innerHTML='<div class="empty">Henüz ders eklemedin. Yukarıdan ilk dersini oluşturabilirsin.</div>';return;}
  $("courseProgress").innerHTML=visible.map(sub=>{
   const ts=studyTopics.filter(t=>t.subject_id===sub.id),done=ts.filter(t=>t.status==="completed").length,pct=ts.length?Math.round(done/ts.length*100):0;
-  const rows=ts.map(t=>`<div class="row ${t.status==='completed'?'topic-done':''}"><div class="grow"><strong>${escapeHtml(t.title)}</strong><div class="small">${t.status==='completed'?'Tamamlandı':t.status==='in_progress'?'Çalışılıyor':'Bekliyor'}${t.review_date?' · Tekrar: '+escapeHtml(t.review_date):''}</div></div><div class="topic-actions"><button class="secondary" data-topic-status="${t.id}" data-status="${t.status==='completed'?'pending':'completed'}">${t.status==='completed'?'Geri al':'Tamamla'}</button><button class="secondary" data-topic-review="${t.id}">${t.review_date?'Tekrarı kaldır':'Tekrar ekle'}</button></div></div>`).join("");
-  return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="subject-head"><div><strong>${escapeHtml(sub.name)}</strong> <span class="pill">${escapeHtml(sub.exam)}</span></div><span class="small">${done}/${ts.length} konu · %${pct}</span></div><div class="progress"><span style="width:${pct}%"></span></div>${rows||'<div class="empty">Bu derse henüz konu eklenmedi.</div>'}</div>`;
+  const rows=ts.map(t=>`<div class="row ${t.status==='completed'?'topic-done':''}"><div class="grow"><strong>${escapeHtml(t.title)}</strong><div class="small">${t.status==='completed'?'Tamamlandı':t.status==='in_progress'?'Çalışılıyor':'Bekliyor'}${t.review_date?' · Tekrar: '+escapeHtml(t.review_date):''}</div></div><div class="topic-actions"><button class="secondary" data-topic-status="${t.id}" data-status="${t.status==='completed'?'pending':'completed'}">${t.status==='completed'?'Geri al':'Tamamla'}</button><button class="secondary" data-topic-review="${t.id}">${t.review_date?'Tekrarı kaldır':'Tekrar ekle'}</button><button class="danger" data-topic-delete="${t.id}">Sil</button></div></div>`).join("");
+  return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="subject-head"><div><strong>${escapeHtml(sub.name)}</strong> <span class="pill">${escapeHtml(sub.exam)}</span></div><div class="topic-actions"><span class="small">${done}/${ts.length} konu · %${pct}</span><button class="danger" data-subject-delete="${sub.id}">Dersi sil</button></div></div><div class="progress"><span style="width:${pct}%"></span></div>${rows||'<div class="empty">Bu derse henüz konu eklenmedi.</div>'}</div>`;
  }).join("");
  document.querySelectorAll('[data-topic-status]').forEach(b=>b.onclick=()=>updateTopic(b.dataset.topicStatus,{status:b.dataset.status,completed_at:b.dataset.status==='completed'?new Date().toISOString():null}));
  document.querySelectorAll('[data-topic-review]').forEach(b=>b.onclick=()=>toggleReview(b.dataset.topicReview));
+ document.querySelectorAll('[data-topic-delete]').forEach(b=>b.onclick=()=>deleteTopic(b.dataset.topicDelete));
+ document.querySelectorAll('[data-subject-delete]').forEach(b=>b.onclick=()=>deleteSubject(b.dataset.subjectDelete));
 }
 
 const studyPresets={
@@ -411,6 +413,23 @@ $("bulkAddTopics").onclick=async()=>{
  await loadCourses();
 };
 $("subjectFilter").onchange=renderCourses;
+async function deleteTopic(id){
+ const topic=studyTopics.find(t=>t.id===id);if(!topic)return;
+ if(!confirm('"'+topic.title+'" konusunu silmek istediğine emin misin? Bu işlem geri alınamaz.'))return;
+ const {error}=await sb.from("study_topics").delete().eq("id",id).eq("user_id",user.id);
+ if(error)return alert("Konu silinemedi: "+error.message);
+ await loadCourses();
+}
+async function deleteSubject(id){
+ const subject=studySubjects.find(s=>s.id===id);if(!subject)return;
+ const count=studyTopics.filter(t=>t.subject_id===id).length;
+ if(!confirm('"'+subject.name+'" dersini ve içindeki '+count+' konunun tamamını silmek istediğine emin misin? Bu işlem geri alınamaz.'))return;
+ const {error:topicError}=await sb.from("study_topics").delete().eq("subject_id",id).eq("user_id",user.id);
+ if(topicError)return alert("Derse ait konular silinemedi: "+topicError.message);
+ const {error}=await sb.from("study_subjects").delete().eq("id",id).eq("user_id",user.id);
+ if(error)return alert("Ders silinemedi: "+error.message);
+ await loadCourses();
+}
 async function updateTopic(id,patch){const {error}=await sb.from("study_topics").update(patch).eq("id",id).eq("user_id",user.id);if(error)return alert(error.message);await loadCourses();}
 async function toggleReview(id){const t=studyTopics.find(x=>x.id===id);if(!t)return;if(t.review_date)return updateTopic(id,{review_date:null});const d=prompt("Tekrar tarihi (YYYY-AA-GG):",new Date(Date.now()+86400000).toLocaleDateString('sv-SE'));if(d===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert("Tarihi YYYY-AA-GG biçiminde gir.");await updateTopic(id,{review_date:d});}
 
