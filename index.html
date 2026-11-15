@@ -245,7 +245,7 @@ async function loadFriends(){
  if(e)throw e;
  const {data:pres,error:pe}=await sb.from("user_presence").select("user_id,last_seen_at").in("user_id",ids);
  if(pe)throw pe;
- friends=(ps||[]).map(p=>({...p,online:!!pres?.find(x=>x.user_id===p.id && Date.now()-new Date(x.last_seen_at).getTime()<90000)}));
+ friends=(ps||[]).map(p=>({...p,online:!!pres?.find(x=>x.user_id===p.id && Date.now()-new Date(x.last_seen_at).getTime()<40000)}));
  renderFriends();
 }
 function renderFriends(){
@@ -486,10 +486,12 @@ async function heartbeat(){
 }
 async function startPresence(){
  await heartbeat();presenceInterval=setInterval(heartbeat,30000);
- // Realtime tetikleyicisi arkadaş listesini hızlı yenilemek için kullanılır.
+ if(friendsRefreshInterval)clearInterval(friendsRefreshInterval);
+ friendsRefreshInterval=setInterval(()=>{if(user)loadFriends().catch(()=>{});},5000);
+ // Realtime olayları anlık güncellemeyi destekler; 5 saniyelik yenileme yedek kontroldür.
  presenceChannel=sb.channel("studyflow-friend-presence").on("postgres_changes",{event:"*",schema:"public",table:"user_presence"},()=>loadFriends()).subscribe();
 }
-function stopPresence(){if(presenceInterval)clearInterval(presenceInterval);presenceInterval=null;if(presenceChannel)sb.removeChannel(presenceChannel);presenceChannel=null;}
+function stopPresence(){if(presenceInterval)clearInterval(presenceInterval);presenceInterval=null;if(friendsRefreshInterval)clearInterval(friendsRefreshInterval);friendsRefreshInterval=null;if(presenceChannel)sb.removeChannel(presenceChannel);presenceChannel=null;}
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
