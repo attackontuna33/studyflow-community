@@ -172,6 +172,10 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 </main></div></div>
 
+<div id="avatarLightbox" onclick="closeAvatarPreview()" style="display:none;position:fixed;inset:0;z-index:1000;background:#000e;align-items:center;justify-content:center;padding:20px">
+ <button type="button" onclick="closeAvatarPreview()" aria-label="Kapat" style="position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;font-size:24px;background:#303653">×</button>
+ <img id="avatarPreviewImage" alt="Büyütülmüş profil fotoğrafı" style="max-width:94vw;max-height:86vh;object-fit:contain;border-radius:14px;box-shadow:0 12px 50px #0009" onclick="event.stopPropagation()">
+</div>
 <script>
 /* SUPABASE AYARLARI: SQL kurulumundan sonra kendi proje bilgilerini gir. */
 const SUPABASE_URL = window.STUDYFLOW_SUPABASE_URL || "";
@@ -235,9 +239,19 @@ $("deleteMyAccount").onclick=async()=>{
   stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();
  }catch(e){$("deleteAccountMsg").textContent="Silme işlemi başarısız: "+e.message;button.disabled=false;}
 };
+function showAvatarPreview(src){
+ if(!src)return;
+ $("avatarPreviewImage").src=src;
+ $("avatarLightbox").style.display="flex";
+}
+function closeAvatarPreview(){
+ $("avatarLightbox").style.display="none";
+ $("avatarPreviewImage").removeAttribute("src");
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAvatarPreview();});
 function renderMyAvatar(){
  const img=$("myAvatar");if(!img)return;
- if(profile?.avatar_url){img.src=profile.avatar_url;img.style.display="block";}
+ if(profile?.avatar_url){img.src=profile.avatar_url;img.style.display="block";img.style.cursor="zoom-in";img.onclick=()=>showAvatarPreview(img.src);}
  else{img.removeAttribute("src");img.style.display="none";}
 }
 $("uploadAvatar").onclick=async()=>{
@@ -278,6 +292,7 @@ async function loadFriends(){
 function renderFriends(){
  const html=friends.map(f=>`<div class="row"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
+ $("friendsList").querySelectorAll("img").forEach(img=>{img.style.cursor="zoom-in";img.onclick=()=>showAvatarPreview(img.src);});
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
 }
 $("sendRequest").onclick=async()=>{
