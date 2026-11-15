@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STUDYFLOW Community</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
+<style>
+:root{--bg:#0e1020;--panel:#191c32;--panel2:#222744;--purple:#8b75f5;--blue:#547cf6;--text:#f2f1ff;--muted:#9ba1c2;--line:#303653;--green:#43d6a0;--orange:#ffb45f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;background:linear-gradient(100deg,var(--purple),var(--blue));color:white;font-weight:650}
+button.secondary{background:#303653}button.danger{background:#713b59}button:disabled{opacity:.5;cursor:not--allowed}
+input,select{width:100%;padding:12px;background:#101429;border:1px solid var(--line);border-radius:9px;color:white;outline:none}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 20% 10%,#28265b 0,transparent 45%),radial-gradient(ellipse at 90% 90%,#18365a 0,transparent 40%),var(--bg)}
+.auth{width:min(430px,100%);padding:28px;background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:0 20px 80px #0006}
+.logo{font-size:25px;font-weight:900;letter-spacing:.5px;background:linear-gradient(90deg,#a48aff,#5aa9ff);background-clip:text;color:transparent}
+.muted{color:var(--muted);font-size:13px}.auth h1{font-size:23px;margin:25px 0 5px}.auth button{width:100%;margin-top:14px}
+.auth .switch{background:transparent;color:#b9adff;margin-top:5px}
+#app{display:none;min-height:100vh}.shell{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#14172a;border-right:1px solid var(--line);padding:22px 15px;flex-shrink:0}
+.sidebar .logo{margin:0 8px 28px}.nav button{display:block;width:100%;text-align:left;margin:5px 0;background:transparent;color:#bec3df}
+.nav button.active,.nav button:hover{background:linear-gradient(100deg,#5142a8,#324b91);color:white}
+.main{padding:28px;flex:1;min-width:0;max-width:1300px;margin:auto;width:100%}
+.top{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}
+h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:19px;min-width:0}
+.kicker{font-size:12px;color:var(--muted)}.value{font-size:27px;font-weight:800;margin-top:8px}
+.layout{grid-template-columns:1.2fr 1fr;margin-top:16px}.title{font-weight:750;margin-bottom:15px}
+.timer{text-align:center;padding:22px;background:linear-gradient(140deg,#29265b,#1b3155);border-radius:13px}
+.clock{font-size:48px;font-weight:850;letter-spacing:2px;margin:12px}
+.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}.grow{flex:1;min-width:0}.small{font-size:12px;color:var(--muted);margin-top:4px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}.online{background:var(--green)}.offline{background:#737995}
+.pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#35305f;color:#d2c8ff;font-size:11px}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.tabs button{padding:8px 12px;font-size:12px}
+.view{display:none}.view.active{display:block}.formrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.notice{padding:11px;border-radius:10px;background:#25294a;color:#c8ccef;font-size:12px;margin-top:12px}
+.empty{padding:15px 0;color:var(--muted);font-size:13px}
+@media(max-width:800px){.sidebar{width:190px}.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
+@media(max-width:620px){.shell{display:block}.sidebar{width:100%;padding:10px;position:sticky;top:0;z-index:3}.sidebar .logo{margin:4px 8px 10px;font-size:20px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;width:auto;padding:9px;font-size:12px}.main{padding:17px 12px}.top{align-items:flex-start}.stats{gap:9px}.card{padding:14px}.value{font-size:22px}.formrow{grid-template-columns:1fr}.clock{font-size:40px}}
+</style>
+</head>
+<body>
+<section id="authScreen" class="auth-wrap">
+ <div class="auth">
+  <div class="logo">✦ STUDYFLOW</div><div class="muted">Your personal study community</div>
+  <h1 id="authTitle">Hesabına giriş yap</h1><div class="muted" id="authSub">Arkadaşlarınla birlikte ilerle.</div>
+  <div id="signupNameWrap" style="display:none"><label>Görünen ad (isteğe bağlı)</label><input id="displayName" maxlength="30" placeholder="Adın veya takma adın"></div>
+  <label>Kullanıcı adı</label><input id="username" autocomplete="username" maxlength="24" placeholder="Örn. tuna_ogretmen">
+  <label>Şifre</label><input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="En az 8 karakter">
+  <button id="authSubmit">Giriş yap</button><button class="switch" id="authSwitch">Hesabın yok mu? Kayıt ol</button>
+  <div class="notice">Kullanıcı adın herkese açık profil adındır. Şifreni kimseyle paylaşma.</div>
+  <div id="authMsg" class="small" role="status"></div>
+ </div>
+</section>
+
+<div id="app"><div class="shell">
+<aside class="sidebar"><div class="logo">✦ STUDYFLOW</div><div class="nav">
+<button class="active" data-view="home">◫ Ana Panel</button>
+<button data-view="friends">♧ Arkadaşlar</button>
+<button data-view="ranking">♛ Sıralama</button>
+<button data-view="timerView">◷ Kronometre</button>
+<button data-view="account">⚙ Hesap</button>
+</div><div style="margin:25px 8px 0" class="small" id="meLabel"></div><button class="secondary" id="logout" style="width:100%;margin-top:12px">Çıkış yap</button></aside>
+<main class="main">
+<header class="top"><div><h1 id="pageTitle">Ana Panel</h1><div class="muted">Birlikte çalış, birlikte ilerle.</div></div><span class="pill" id="connection">Bağlanıyor…</span></header>
+
+<section class="view active" id="home">
+ <div class="grid stats">
+  <div class="card"><div class="kicker">Bugünkü çalışma</div><div class="value" id="todayTime">00:00:00</div></div>
+  <div class="card"><div class="kicker">Günlük seri</div><div class="value" id="myStreak">0 🔥</div></div>
+  <div class="card"><div class="kicker">Haftalık çalışma</div><div class="value" id="weekTime">0 dk</div></div>
+ </div>
+ <div class="grid layout">
+  <div class="card"><div class="title">⏱ Odak kronometresi</div><div class="timer">
+   <select id="subject"><option>AGS</option><option>ÖABT</option><option>Genel tekrar</option></select>
+   <div class="clock" id="clock">00:00:00</div>
+   <div class="actions"><button id="start">Başlat</button><button class="secondary" id="pause">Duraklat</button><button class="secondary" id="reset">Sıfırla</button><button id="saveSession">Kaydet</button></div>
+   <div class="small" id="timerMsg">En az 30 dakika, günlük serine 1 gün ekler.</div>
+  </div></div>
+  <div class="card"><div class="title">Arkadaşların</div><div id="homeFriends" class="empty">Arkadaşların burada görünecek.</div></div>
+ </div>
+ <div class="card" style="margin-top:16px"><div class="title">Son çalışma kayıtlarım</div><div id="myRecent" class="empty">Henüz kayıt yok.</div></div>
+</section>
+
+<section class="view" id="friends">
+ <div class="card">
+  <div class="title">Arkadaş ekle</div>
+  <div class="formrow"><div><label>Kullanıcı adı</label><input id="friendUsername" placeholder="Arkadaşının kullanıcı adı"></div><div style="align-self:end"><button id="sendRequest" style="width:100%">İstek gönder</button></div></div>
+  <div class="small" id="friendMsg"></div>
+ </div>
+ <div class="grid layout">
+  <div class="card"><div class="title">Gelen istekler</div><div id="incoming" class="empty">Bekleyen istek yok.</div></div>
+  <div class="card"><div class="title">Arkadaşlarım</div><div id="friendsList" class="empty">Henüz arkadaş eklemedin.</div></div>
+ </div>
+</section>
+
+<section class="view" id="ranking">
+ <div class="card"><div class="title">Arkadaşlar arasında haftalık sıralama</div><div class="tabs"><button id="rankWeek">Bu hafta</button><button class="secondary" id="rankStreak">Günlük seri</button></div><div id="leaderboard" class="empty">Sıralama yükleniyor…</div></div>
+ <div class="notice">Sıralamada yalnızca sen ve onaylı arkadaşların yer alır. Çalışma kayıtlarının ayrıntıları paylaşılmaz.</div>
+</section>
+
+<section class="view" id="timerView">
+ <div class="card"><div class="title">Çalışma oturumu</div><p class="muted">Kronometreyi başlat, bitirdiğinde kaydet. Kaydedilen süre istatistiklerine eklenir.</p><div class="timer"><div class="clock" id="clock2">00:00:00</div><div class="actions"><button id="start2">Başlat</button><button class="secondary" id="pause2">Duraklat</button><button class="secondary" id="reset2">Sıfırla</button><button id="save2">Kaydet</button></div></div></div>
+</section>
+
+<section class="view" id="account">
+ <div class="card"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
+</section>
+</main></div></div>
+
+<script>
+/* SUPABASE AYARLARI: SQL kurulumundan sonra kendi proje bilgilerini gir. */
+const SUPABASE_URL = window.STUDYFLOW_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.STUDYFLOW_SUPABASE_ANON_KEY || "";
+const configured = SUPABASE_URL.startsWith("https://") &&
+  SUPABASE_ANON_KEY.length > 20 &&
+  !SUPABASE_URL.includes("YOUR-PROJECT") &&
+  !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
+const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+const $ = id => document.getElementById(id);
+let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null;
+let presenceInterval=null, presenceChannel=null;
+
+function msg(t,el="authMsg"){ $(el).textContent=t; }
+function cleanUsername(s){return s.trim().toLowerCase();}
+function validUsername(s){return /^[a-z0-9_]{3,24}$/.test(s);}
+function syntheticEmail(username){return cleanUsername(username)+"@studyflow.invalid";}
+function fmt(sec){sec=Math.max(0,Math.floor(sec));return [Math.floor(sec/3600),Math.floor(sec%3600/60),sec%60].map(n=>String(n).padStart(2,"0")).join(":");}
+function today(){return new Date().toLocaleDateString("sv-SE");}
+function sinceDate(days){let d=new Date();d.setDate(d.getDate()-days);return d.toLocaleDateString("sv-SE");}
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showAuth(){ $("authScreen").style.display="grid";$("app").style.display="none"; }
+function showApp(){ $("authScreen").style.display="none";$("app").style.display="block"; }
+function switchAuth(){signUpMode=!signUpMode;$("authTitle").textContent=signUpMode?"Yeni hesap oluştur":"Hesabına giriş yap";$("authSub").textContent=signUpMode?"StudyFlow topluluğuna katıl.":"Arkadaşlarınla birlikte ilerle.";$("signupNameWrap").style.display=signUpMode?"block":"none";$("authSubmit").textContent=signUpMode?"Kayıt ol":"Giriş yap";$("authSwitch").textContent=signUpMode?"Zaten hesabın var mı? Giriş yap":"Hesabın yok mu? Kayıt ol";msg("");}
+$("authSwitch").onclick=switchAuth;
+$("authSubmit").onclick=async()=>{
+ if(!configured){msg("Önce index.html içindeki Supabase URL ve anon key alanlarını doldur.");return;}
+ const username=cleanUsername($("username").value), password=$("password").value;
+ if(!validUsername(username)){msg("Kullanıcı adı 3–24 karakter olmalı; yalnızca a-z, 0-9 ve _ kullan.");return;}
+ if(password.length<8){msg("Şifre en az 8 karakter olmalı.");return;}
+ $("authSubmit").disabled=true;msg("İşleniyor…");
+ try{
+  if(signUpMode){
+   const {data,error}=await sb.auth.signUp({email:syntheticEmail(username),password,options:{data:{username,display_name:$("displayName").value.trim()||username}}});
+   if(error)throw error;
+   if(!data.session){msg("Kayıt oluşturuldu. Supabase Auth ayarlarında email confirmation kapalı olmalı; sonra giriş yap.");}
+   else await afterLogin(data.user);
+  }else{
+   const {data,error}=await sb.auth.signInWithPassword({email:syntheticEmail(username),password});
+   if(error)throw error;
+   await afterLogin(data.user);
+  }
+ }catch(e){msg(e.message||"İşlem başarısız.");}
+ finally{$("authSubmit").disabled=false;}
+};
+async function afterLogin(u){
+ user=u;
+ const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
+ if(error)throw error;profile=data;
+ showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;
+ await loadFriends();await refreshDashboard();startPresence();setConnection(true);
+}
+$("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
+function setConnection(ok){$("connection").textContent=ok?"Bağlı":"Bağlantı bekleniyor";$("connection").style.background=ok?"#174b40":"#4a3a29";}
+
+async function loadFriends(){
+ const {data:rels,error}=await sb.from("friendships").select("user_a,user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+ if(error)throw error;
+ const ids=(rels||[]).map(r=>r.user_a===user.id?r.user_b:r.user_a);
+ if(!ids.length){friends=[];renderFriends();return;}
+ const {data:ps,error:e}=await sb.from("profiles").select("id,username,display_name").in("id",ids);
+ if(e)throw e;
+ const {data:pres,error:pe}=await sb.from("user_presence").select("user_id,last_seen_at").in("user_id",ids);
+ if(pe)throw pe;
+ friends=(ps||[]).map(p=>({...p,online:!!pres?.find(x=>x.user_id===p.id && Date.now()-new Date(x.last_seen_at).getTime()<90000)}));
+ renderFriends();
+}
+function renderFriends(){
+ const html=friends.map(f=>`<div class="row"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">@${escapeHtml(f.username)}</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
+ $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
+ $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
+}
+$("sendRequest").onclick=async()=>{
+ const uname=cleanUsername($("friendUsername").value);
+ if(!validUsername(uname)){msg("Geçerli bir kullanıcı adı gir.","friendMsg");return;}
+ const {data:p,error}=await sb.from("profiles").select("id,username").eq("username",uname).maybeSingle();
+ if(error) return msg(error.message,"friendMsg");
+ if(!p)return msg("Bu kullanıcı bulunamadı.","friendMsg");
+ if(p.id===user.id)return msg("Kendine arkadaşlık isteği gönderemezsin.","friendMsg");
+ const {error:e}=await sb.from("friend_requests").insert({requester_id:user.id,addressee_id:p.id});
+ msg(e?e.message:"Arkadaşlık isteği gönderildi.","friendMsg");$("friendUsername").value="";
+};
+async function renderRequests(){
+ const {data:req,error}=await sb.from("friend_requests").select("id,requester_id,profiles!friend_requests_requester_id_fkey(username,display_name)").eq("addressee_id",user.id).eq("status","pending");
+ if(error){$("incoming").textContent=error.message;return;}
+ $("incoming").innerHTML=(req||[]).map(r=>`<div class="row"><div class="grow"><strong>${escapeHtml(r.profiles?.display_name||r.profiles?.username)}</strong><div class="small">@${escapeHtml(r.profiles?.username)}</div></div><button data-accept="${r.id}">Kabul et</button></div>`).join("")||'<div class="empty">Bekleyen istek yok.</div>';
+ document.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>acceptRequest(b.dataset.accept));
+}
+async function acceptRequest(id){
+ const {data:r,error}=await sb.from("friend_requests").select("requester_id,addressee_id").eq("id",id).single();
+ if(error)return alert(error.message);
+ const {error:e}=await sb.from("friend_requests").update({status:"accepted"}).eq("id",id);
+ if(e)return alert(e.message);
+ // Veritabanı tetikleyicisi, kabul edilen isteği güvenli biçimde arkadaşlığa dönüştürür.
+ await loadFriends();await renderRequests();await renderLeaderboard("week");
+}
+async function refreshDashboard(){
+ const {data:mine,error}=await sb.from("daily_stats").select("day,seconds").eq("user_id",user.id).gte("day",sinceDate(365)).order("day",{ascending:false});
+ if(error)throw error;
+ const todayRow=mine.find(x=>x.day===today());$("todayTime").textContent=fmt(todayRow?.seconds||0);
+ let week=(mine||[]).filter(x=>x.day>=sinceDate(6)).reduce((a,x)=>a+x.seconds,0);
+ $("weekTime").textContent=Math.round(week/60)+" dk";
+ const days=new Set((mine||[]).filter(x=>x.seconds>=1800).map(x=>x.day));
+ let streak=0,d=new Date();
+ while(days.has(d.toLocaleDateString("sv-SE"))){streak++;d.setDate(d.getDate()-1);}
+ // Bugün henüz 30 dk olmadıysa, dün biten seri gününü de göster.
+ if(!days.has(today())){d=new Date();d.setDate(d.getDate()-1);while(days.has(d.toLocaleDateString("sv-SE"))){streak++;d.setDate(d.getDate()-1);}}
+ $("myStreak").textContent=streak+" 🔥";
+ $("myRecent").innerHTML=(mine||[]).slice(0,7).map(x=>`<div class="row"><div class="grow">${x.day}</div><span class="pill">${fmt(x.seconds)}</span></div>`).join("")||'<div class="empty">Henüz çalışma kaydı yok.</div>';
+ await loadFriends();await renderRequests();await renderLeaderboard("week");
+}
+function renderLeaderboard(mode){
+ return loadLeaderboard(mode);
+}
+async function loadLeaderboard(mode){
+ const ids=[user.id,...friends.map(f=>f.id)];
+ const {data:stats,error}=await sb.from("daily_stats").select("user_id,day,seconds").in("user_id",ids).gte("day",mode==="week"?sinceDate(6):sinceDate(365));
+ if(error){$("leaderboard").textContent=error.message;return;}
+ const arr=ids.map(id=>{
+  const total=(stats||[]).filter(x=>x.user_id===id);
+  let score;
+  if(mode==="week")score=total.reduce((a,x)=>a+x.seconds,0);
+  else {const active=new Set(total.filter(x=>x.seconds>=1800).map(x=>x.day));let n=0,d=new Date();while(active.has(d.toLocaleDateString("sv-SE"))){n++;d.setDate(d.getDate()-1);}if(!active.has(today())){d=new Date();d.setDate(d.getDate()-1);while(active.has(d.toLocaleDateString("sv-SE"))){n++;d.setDate(d.getDate()-1);}}score=n;}
+  const f=friends.find(x=>x.id===id);return {id,name:id===user.id?(profile.display_name||profile.username):(f?.display_name||f?.username||"Arkadaş"),score};
+ }).sort((a,b)=>b.score-a.score);
+ $("leaderboard").innerHTML=arr.map((x,i)=>`<div class="row"><div class="grow"><strong>${i+1}. ${escapeHtml(x.name)}${x.id===user.id?" (Sen)":""}</strong></div><span class="pill">${mode==="week"?Math.round(x.score/60)+" dk":x.score+" gün 🔥"}</span></div>`).join("")||'<div class="empty">Henüz veri yok.</div>';
+}
+$("rankWeek").onclick=()=>loadLeaderboard("week");$("rankStreak").onclick=()=>loadLeaderboard("streak");
+
+function paint(){ $("clock").textContent=fmt(timerSeconds);$("clock2").textContent=fmt(timerSeconds);}
+function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();}
+function startTimer(){if(timerRunning)return;timerRunning=true;timerStart=Date.now()-timerSeconds*1000;timerInterval=setInterval(tick,500);}
+function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);}
+function resetTimer(){pauseTimer();timerSeconds=0;paint();}
+async function saveTimer(){
+ pauseTimer();if(timerSeconds<1)return alert("Kaydedilecek süre yok.");
+ const seconds=timerSeconds, subject=$("subject").value;
+ const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject,seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
+ if(error)return alert(error.message);
+ timerSeconds=0;paint();$("timerMsg").textContent="Oturum kaydedildi.";await refreshDashboard();
+}
+["start","start2"].forEach(id=>$(id).onclick=startTimer);
+["pause","pause2"].forEach(id=>$(id).onclick=pauseTimer);
+["reset","reset2"].forEach(id=>$(id).onclick=resetTimer);
+["saveSession","save2"].forEach(id=>$(id).onclick=saveTimer);
+
+async function heartbeat(){
+ if(!user)return;
+ const {error}=await sb.from("user_presence").upsert({user_id:user.id,last_seen_at:new Date().toISOString()},{onConflict:"user_id"});
+ if(error)setConnection(false);else setConnection(true);
+}
+async function startPresence(){
+ await heartbeat();presenceInterval=setInterval(heartbeat,30000);
+ // Realtime tetikleyicisi arkadaş listesini hızlı yenilemek için kullanılır.
+ presenceChannel=sb.channel("studyflow-friend-presence").on("postgres_changes",{event:"*",schema:"public",table:"user_presence"},()=>loadFriends()).subscribe();
+}
+function stopPresence(){if(presenceInterval)clearInterval(presenceInterval);presenceInterval=null;if(presenceChannel)sb.removeChannel(presenceChannel);presenceChannel=null;}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+ document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
+ $("pageTitle").textContent=b.textContent.trim();
+});
+if(configured){
+ sb.auth.getSession().then(async({data})=>{if(data.session){try{await afterLogin(data.session.user)}catch(e){msg(e.message);}}});
+ sb.auth.onAuthStateChange((_event,session)=>{if(!session){stopPresence();}});
+}else{msg("Kurulum için önce Supabase bilgilerini ekle.");}
+window.addEventListener("online",()=>setConnection(true));window.addEventListener("offline",()=>setConnection(false));
+</script>
+</body></html>
