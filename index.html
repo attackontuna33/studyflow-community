@@ -166,7 +166,8 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="account">
- <div class="card"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
+ <div class="card"><div class="title">Profil fotoğrafım</div><div class="row" style="align-items:center"><img id="myAvatar" src="" alt="Profil fotoğrafı" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#303653;display:none"><div class="grow"><input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp"><div class="small">JPG, PNG veya WebP · En fazla 3 MB</div><button id="uploadAvatar" style="margin-top:10px">Fotoğrafı yükle</button><div class="small" id="avatarMsg" aria-live="polite"></div></div></div></div>
+ <div class="card" style="margin-top:16px"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
  <div class="card" style="margin-top:16px;border-color:#713b59"><div class="title">Hesabımı sil</div><div class="muted">Yalnızca kendi hesabını silebilirsin. Hesabın ve ilişkili çalışma verilerin kalıcı olarak silinir.</div><button class="danger" id="deleteMyAccount" style="margin-top:14px">Kendi hesabımı kalıcı olarak sil</button><div class="small" id="deleteAccountMsg" aria-live="polite"></div></div>
 </section>
 </main></div></div>
@@ -220,7 +221,7 @@ async function afterLogin(u){
  user=u;
  const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
  if(error)throw error;profile=data;
- showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;
+ showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;renderMyAvatar();
  await loadFriends();await refreshDashboard();await loadCourses();startPresence();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
@@ -234,6 +235,29 @@ $("deleteMyAccount").onclick=async()=>{
   stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();
  }catch(e){$("deleteAccountMsg").textContent="Silme işlemi başarısız: "+e.message;button.disabled=false;}
 };
+function renderMyAvatar(){
+ const img=$("myAvatar");if(!img)return;
+ if(profile?.avatar_url){img.src=profile.avatar_url;img.style.display="block";}
+ else{img.removeAttribute("src");img.style.display="none";}
+}
+$("uploadAvatar").onclick=async()=>{
+ const file=$("avatarFile").files?.[0];if(!file)return msg("Önce bir fotoğraf seç.","avatarMsg");
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type))return msg("JPG, PNG veya WebP dosyası seç.","avatarMsg");
+ if(file.size>3*1024*1024)return msg("Fotoğraf 3 MB'dan küçük olmalı.","avatarMsg");
+ const button=$("uploadAvatar");button.disabled=true;msg("Yükleniyor…","avatarMsg");
+ try{
+  const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+  const path=user.id+"/"+Date.now()+"."+ext;
+  const {error:uploadError}=await sb.storage.from("profile-photos").upload(path,file,{upsert:true,contentType:file.type});
+  if(uploadError)throw uploadError;
+  const {data}=sb.storage.from("profile-photos").getPublicUrl(path);
+  const {data:updated,error}=await sb.from("profiles").update({avatar_url:data.publicUrl}).eq("id",user.id).select("*").single();
+  if(error)throw error;
+  profile=updated;renderMyAvatar();await loadFriends();
+  msg("Profil fotoğrafın güncellendi.","avatarMsg");
+ }catch(e){msg("Yükleme başarısız: "+e.message,"avatarMsg");}
+ finally{button.disabled=false;}
+};
 function setConnection(ok){$("connection").textContent=ok?"Bağlı":"Bağlantı bekleniyor";$("connection").style.background=ok?"#174b40":"#4a3a29";}
 
 async function loadFriends(){
@@ -241,7 +265,7 @@ async function loadFriends(){
  if(error)throw error;
  const ids=(rels||[]).map(r=>r.user_a===user.id?r.user_b:r.user_a);
  if(!ids.length){friends=[];renderFriends();return;}
- const {data:ps,error:e}=await sb.from("profiles").select("id,username,display_name").in("id",ids);
+ const {data:ps,error:e}=await sb.from("profiles").select("id,username,display_name,avatar_url").in("id",ids);
  if(e)throw e;
  const {data:pres,error:pe}=await sb.from("user_presence").select("user_id,last_seen_at").in("user_id",ids);
  if(pe)throw pe;
@@ -249,7 +273,7 @@ async function loadFriends(){
  renderFriends();
 }
 function renderFriends(){
- const html=friends.map(f=>`<div class="row"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">@${escapeHtml(f.username)}</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
+ const html=friends.map(f=>`<div class="row"><img src="${escapeHtml(f.avatar_url||"")}" alt="" onerror="this.style.display='none'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">@${escapeHtml(f.username)}</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
 }
