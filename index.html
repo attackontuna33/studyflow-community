@@ -166,7 +166,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="account">
- <div class="card"><div class="title">Profil fotoğrafım</div><div class="row" style="align-items:center"><img id="myAvatar" src="" alt="Profil fotoğrafı" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#303653;display:none"><div class="grow"><input id="avatarFile" type="file" accept="image/png,image/jpeg,image/webp"><div class="small">JPG, PNG veya WebP · En fazla 3 MB</div><button id="uploadAvatar" style="margin-top:10px">Fotoğrafı yükle</button><div class="small" id="avatarMsg" aria-live="polite"></div></div></div></div>
+ <div class="card"><div class="title">Profil fotoğrafım</div><div class="row" style="align-items:center"><img id="myAvatar" src="" alt="Profil fotoğrafı" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#303653;display:none"><div class="grow"><input id="avatarFile" type="file" accept="image/*"><div class="small">Telefondan veya tabletten galeriden seçebilirsin. JPG, PNG veya WebP · En fazla 3 MB</div><button id="uploadAvatar" style="margin-top:10px">Fotoğrafı yükle</button><div class="small" id="avatarMsg" aria-live="polite"></div></div></div></div>
  <div class="card" style="margin-top:16px"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
  <div class="card" style="margin-top:16px;border-color:#713b59"><div class="title">Hesabımı sil</div><div class="muted">Yalnızca kendi hesabını silebilirsin. Hesabın ve ilişkili çalışma verilerin kalıcı olarak silinir.</div><button class="danger" id="deleteMyAccount" style="margin-top:14px">Kendi hesabımı kalıcı olarak sil</button><div class="small" id="deleteAccountMsg" aria-live="polite"></div></div>
 </section>
@@ -241,14 +241,17 @@ function renderMyAvatar(){
  else{img.removeAttribute("src");img.style.display="none";}
 }
 $("uploadAvatar").onclick=async()=>{
- const file=$("avatarFile").files?.[0];if(!file)return msg("Önce bir fotoğraf seç.","avatarMsg");
- if(!["image/jpeg","image/png","image/webp"].includes(file.type))return msg("JPG, PNG veya WebP dosyası seç.","avatarMsg");
+ const file=$("avatarFile").files?.[0];if(!file)return msg("Önce fotoğraf seçme alanına dokunup galeriden bir fotoğraf seç.","avatarMsg");
+ const fileName=(file.name||"").toLowerCase();
+ const extFromName=fileName.includes(".")?fileName.split(".").pop():"";
+ const mime=file.type||({jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp"}[extFromName]||"");
+ if(!["image/jpeg","image/png","image/webp"].includes(mime))return msg("Bu fotoğraf biçimi desteklenmiyor. JPG, PNG veya WebP seç.","avatarMsg");
  if(file.size>3*1024*1024)return msg("Fotoğraf 3 MB'dan küçük olmalı.","avatarMsg");
  const button=$("uploadAvatar");button.disabled=true;msg("Yükleniyor…","avatarMsg");
  try{
-  const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+  const ext=mime==="image/png"?"png":mime==="image/webp"?"webp":"jpg";
   const path=user.id+"/"+Date.now()+"."+ext;
-  const {error:uploadError}=await sb.storage.from("profile-photos").upload(path,file,{upsert:true,contentType:file.type});
+  const {error:uploadError}=await sb.storage.from("profile-photos").upload(path,file,{upsert:true,contentType:mime});
   if(uploadError)throw uploadError;
   const {data}=sb.storage.from("profile-photos").getPublicUrl(path);
   const {data:updated,error}=await sb.from("profiles").update({avatar_url:data.publicUrl}).eq("id",user.id).select("*").single();
