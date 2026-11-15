@@ -38,6 +38,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .view{display:none}.view.active{display:block}.formrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .notice{padding:11px;border-radius:10px;background:#25294a;color:#c8ccef;font-size:12px;margin-top:12px}
 .empty{padding:15px 0;color:var(--muted);font-size:13px}
+.progress{height:9px;background:#101429;border-radius:20px;overflow:hidden;margin:10px 0}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--blue));border-radius:20px}.topic-actions{display:flex;gap:7px;flex-wrap:wrap}.topic-actions button{padding:7px 10px;font-size:11px}.topic-done{opacity:.68}.topic-done strong{text-decoration:line-through}.subject-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:800px){.sidebar{width:190px}.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
 @media(max-width:620px){.shell{display:block}.sidebar{width:100%;padding:10px;position:sticky;top:0;z-index:3}.sidebar .logo{margin:4px 8px 10px;font-size:20px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;width:auto;padding:9px;font-size:12px}.main{padding:17px 12px}.top{align-items:flex-start}.stats{gap:9px}.card{padding:14px}.value{font-size:22px}.formrow{grid-template-columns:1fr}.clock{font-size:40px}}
 </style>
@@ -62,6 +63,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 <button data-view="friends">♧ Arkadaşlar</button>
 <button data-view="ranking">♛ Sıralama</button>
 <button data-view="timerView">◷ Kronometre</button>
+<button data-view="courses">▤ Derslerim</button>
 <button data-view="account">⚙ Hesap</button>
 </div><div style="margin:25px 8px 0" class="small" id="meLabel"></div><button class="secondary" id="logout" style="width:100%;margin-top:12px">Çıkış yap</button></aside>
 <main class="main">
@@ -106,6 +108,28 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  <div class="card"><div class="title">Çalışma oturumu</div><p class="muted">Kronometreyi başlat, bitirdiğinde kaydet. Kaydedilen süre istatistiklerine eklenir.</p><div class="timer"><div class="clock" id="clock2">00:00:00</div><div class="actions"><button id="start2">Başlat</button><button class="secondary" id="pause2">Duraklat</button><button class="secondary" id="reset2">Sıfırla</button><button id="save2">Kaydet</button></div></div></div>
 </section>
 
+<section class="view" id="courses">
+ <div class="grid layout">
+  <div class="card">
+   <div class="title">Yeni ders ekle</div>
+   <label>Sınav / kategori</label><select id="newSubjectExam"><option value="AGS">AGS</option><option value="ÖABT">Sınıf Öğretmenliği ÖABT</option><option value="Genel">Genel / Diğer</option></select>
+   <label>Ders adı</label><input id="newSubjectName" maxlength="70" placeholder="Örn. Eğitim Bilimleri">
+   <button id="addSubject" style="width:100%;margin-top:12px">Ders oluştur</button><div class="small" id="subjectMsg"></div>
+  </div>
+  <div class="card">
+   <div class="title">Yeni konu ekle</div>
+   <label>Ders</label><select id="topicSubject"><option value="">Önce ders ekle</option></select>
+   <label>Konu adı</label><input id="newTopicName" maxlength="120" placeholder="Örn. Öğrenme psikolojisi">
+   <button id="addTopic" style="width:100%;margin-top:12px">Konu ekle</button><div class="small" id="topicMsg"></div>
+  </div>
+ </div>
+ <div class="card" style="margin-top:16px">
+  <div class="subject-head"><div><div class="title" style="margin:0">Ders ve konu ilerlemem</div><div class="small">Konu durumlarını güncelle; ilerlemen otomatik hesaplanır.</div></div><select id="subjectFilter" style="max-width:220px"><option value="all">Tüm dersler</option><option value="AGS">AGS</option><option value="ÖABT">ÖABT</option><option value="Genel">Genel / Diğer</option></select></div>
+  <div id="courseProgress" class="empty">Derslerin yükleniyor…</div>
+ </div>
+ <div class="notice">Derslerin ve konu ilerlemen kişiseldir. Arkadaşların bu ayrıntıları göremez.</div>
+</section>
+
 <section class="view" id="account">
  <div class="card"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
 </section>
@@ -127,7 +151,7 @@ let presenceInterval=null, presenceChannel=null;
 function msg(t,el="authMsg"){ $(el).textContent=t; }
 function cleanUsername(s){return s.trim().toLowerCase();}
 function validUsername(s){return /^[a-z0-9_]{3,24}$/.test(s);}
-function syntheticEmail(username){return cleanUsername(username)+"@studyflow.app";}
+function syntheticEmail(username){return cleanUsername(username)+"@studyflow.example.com";}
 function fmt(sec){sec=Math.max(0,Math.floor(sec));return [Math.floor(sec/3600),Math.floor(sec%3600/60),sec%60].map(n=>String(n).padStart(2,"0")).join(":");}
 function today(){return new Date().toLocaleDateString("sv-SE");}
 function sinceDate(days){let d=new Date();d.setDate(d.getDate()-days);return d.toLocaleDateString("sv-SE");}
@@ -161,7 +185,7 @@ async function afterLogin(u){
  const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
  if(error)throw error;profile=data;
  showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;
- await loadFriends();await refreshDashboard();startPresence();setConnection(true);
+ await loadFriends();await refreshDashboard();await loadCourses();startPresence();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
 function setConnection(ok){$("connection").textContent=ok?"Bağlı":"Bağlantı bekleniyor";$("connection").style.background=ok?"#174b40":"#4a3a29";}
@@ -240,6 +264,47 @@ async function loadLeaderboard(mode){
 }
 $("rankWeek").onclick=()=>loadLeaderboard("week");$("rankStreak").onclick=()=>loadLeaderboard("streak");
 
+
+// Ders ve konu takibi: kayıtlar user_id ile ayrılır ve RLS ile yalnızca sahibi erişir.
+let studySubjects=[], studyTopics=[];
+async function loadCourses(){
+ const [{data:subs,error:se},{data:topics,error:te}]=await Promise.all([
+  sb.from("study_subjects").select("id,name,exam,created_at").eq("user_id",user.id).order("created_at",{ascending:true}),
+  sb.from("study_topics").select("id,subject_id,title,status,review_date,completed_at,created_at").eq("user_id",user.id).order("created_at",{ascending:true})
+ ]);
+ if(se)throw se;if(te)throw te;studySubjects=subs||[];studyTopics=topics||[];renderCourses();
+}
+function renderCourses(){
+ const select=$("topicSubject"),keep=select.value;
+ select.innerHTML=studySubjects.map(x=>`<option value="${x.id}">${escapeHtml(x.exam)} · ${escapeHtml(x.name)}</option>`).join("")||'<option value="">Önce ders ekle</option>';
+ if(studySubjects.some(x=>x.id===keep))select.value=keep;
+ const filter=$("subjectFilter").value;
+ const visible=studySubjects.filter(x=>filter==="all"||x.exam===filter);
+ if(!visible.length){$("courseProgress").innerHTML='<div class="empty">Henüz ders eklemedin. Yukarıdan ilk dersini oluşturabilirsin.</div>';return;}
+ $("courseProgress").innerHTML=visible.map(sub=>{
+  const ts=studyTopics.filter(t=>t.subject_id===sub.id),done=ts.filter(t=>t.status==="completed").length,pct=ts.length?Math.round(done/ts.length*100):0;
+  const rows=ts.map(t=>`<div class="row ${t.status==='completed'?'topic-done':''}"><div class="grow"><strong>${escapeHtml(t.title)}</strong><div class="small">${t.status==='completed'?'Tamamlandı':t.status==='in_progress'?'Çalışılıyor':'Bekliyor'}${t.review_date?' · Tekrar: '+escapeHtml(t.review_date):''}</div></div><div class="topic-actions"><button class="secondary" data-topic-status="${t.id}" data-status="${t.status==='completed'?'pending':'completed'}">${t.status==='completed'?'Geri al':'Tamamla'}</button><button class="secondary" data-topic-review="${t.id}">${t.review_date?'Tekrarı kaldır':'Tekrar ekle'}</button></div></div>`).join("");
+  return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="subject-head"><div><strong>${escapeHtml(sub.name)}</strong> <span class="pill">${escapeHtml(sub.exam)}</span></div><span class="small">${done}/${ts.length} konu · %${pct}</span></div><div class="progress"><span style="width:${pct}%"></span></div>${rows||'<div class="empty">Bu derse henüz konu eklenmedi.</div>'}</div>`;
+ }).join("");
+ document.querySelectorAll('[data-topic-status]').forEach(b=>b.onclick=()=>updateTopic(b.dataset.topicStatus,{status:b.dataset.status,completed_at:b.dataset.status==='completed'?new Date().toISOString():null}));
+ document.querySelectorAll('[data-topic-review]').forEach(b=>b.onclick=()=>toggleReview(b.dataset.topicReview));
+}
+$("addSubject").onclick=async()=>{
+ const name=$("newSubjectName").value.trim(),exam=$("newSubjectExam").value;
+ if(!name)return msg("Ders adını yaz.","subjectMsg");
+ const {error}=await sb.from("study_subjects").insert({user_id:user.id,name,exam});
+ if(error)return msg(error.message,"subjectMsg");$("newSubjectName").value="";msg("Ders eklendi.","subjectMsg");await loadCourses();
+};
+$("addTopic").onclick=async()=>{
+ const subject_id=$("topicSubject").value,title=$("newTopicName").value.trim();
+ if(!subject_id)return msg("Önce bir ders oluştur.","topicMsg");if(!title)return msg("Konu adını yaz.","topicMsg");
+ const {error}=await sb.from("study_topics").insert({user_id:user.id,subject_id,title});
+ if(error)return msg(error.message,"topicMsg");$("newTopicName").value="";msg("Konu eklendi.","topicMsg");await loadCourses();
+};
+$("subjectFilter").onchange=renderCourses;
+async function updateTopic(id,patch){const {error}=await sb.from("study_topics").update(patch).eq("id",id).eq("user_id",user.id);if(error)return alert(error.message);await loadCourses();}
+async function toggleReview(id){const t=studyTopics.find(x=>x.id===id);if(!t)return;if(t.review_date)return updateTopic(id,{review_date:null});const d=prompt("Tekrar tarihi (YYYY-AA-GG):",new Date(Date.now()+86400000).toLocaleDateString('sv-SE'));if(d===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert("Tarihi YYYY-AA-GG biçiminde gir.");await updateTopic(id,{review_date:d});}
+
 function paint(){ $("clock").textContent=fmt(timerSeconds);$("clock2").textContent=fmt(timerSeconds);}
 function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();}
 function startTimer(){if(timerRunning)return;timerRunning=true;timerStart=Date.now()-timerSeconds*1000;timerInterval=setInterval(tick,500);}
@@ -271,7 +336,7 @@ function stopPresence(){if(presenceInterval)clearInterval(presenceInterval);pres
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
- $("pageTitle").textContent=b.textContent.trim();
+ $("pageTitle").textContent=b.textContent.trim();if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
 });
 if(configured){
  sb.auth.getSession().then(async({data})=>{if(data.session){try{await afterLogin(data.session.user)}catch(e){msg(e.message);}}});
