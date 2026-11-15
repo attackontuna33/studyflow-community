@@ -589,9 +589,9 @@ async function startPresence(){
  if(chatChannel)sb.removeChannel(chatChannel);
  chatChannel=sb.channel("studyflow-chat")
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(e=>msg(e.message,"chatMsg"));})
-  .subscribe((status)=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")msg("Canlı bağlantı kurulamadı; otomatik yenileme devrede.","chatMsg");});
+  .subscribe((status)=>{if(status==="SUBSCRIBED"){if($("chat").classList.contains("active"))msg("Canlı sohbet bağlantısı kuruldu.","chatMsg");}else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){if($("chat").classList.contains("active"))msg("Canlı bağlantı kurulamadı. Mesajlar 1,5 saniyede bir kontrol ediliyor.","chatMsg");}});
  if(chatRefreshInterval)clearInterval(chatRefreshInterval);
- chatRefreshInterval=setInterval(()=>{if(user)loadChatMessages().catch(e=>console.warn("Sohbet yenileme:",e));},4000);
+ chatRefreshInterval=setInterval(()=>{if(user)loadChatMessages().catch(e=>{console.warn("Sohbet yenileme:",e);if($("chat").classList.contains("active"))msg("Mesajlar yenilenemedi: "+e.message,"chatMsg");});},1500);
  if(dataChannel)sb.removeChannel(dataChannel);
  dataChannel=sb.channel("studyflow-live-data")
   .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},()=>{if(user)loadFriends().catch(()=>{});})
