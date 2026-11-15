@@ -199,7 +199,7 @@ const configured = SUPABASE_URL.startsWith("https://") &&
 const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 const $ = id => document.getElementById(id);
 let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null;
-let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null;
+let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null, chatLoadInFlight=false;
 
 function msg(t,el="authMsg"){ $(el).textContent=t; }
 function cleanUsername(s){return s.trim().toLowerCase();}
@@ -535,7 +535,9 @@ async function saveTimer(){
 
 
 async function loadChatMessages(){
- if(!user)return;
+ if(!user||chatLoadInFlight)return;
+ chatLoadInFlight=true;
+ try {
  const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
  const {data,error}=await sb.from("chat_messages").select("id,sender_id,body,created_at,profiles!chat_messages_sender_id_fkey(username,display_name,avatar_url)").gte("created_at",cutoff).order("created_at",{ascending:true}).limit(300);
  if(error)throw error;
@@ -580,7 +582,7 @@ async function startPresence(){
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(e=>msg(e.message,"chatMsg"));})
   .subscribe((status)=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")msg("Canlı bağlantı kurulamadı; otomatik yenileme devrede.","chatMsg");});
  if(chatRefreshInterval)clearInterval(chatRefreshInterval);
- // Sohbet yenileme aralığı, kullanıcı Genel Sohbet sekmesini açtığında başlatılır.
+ chatRefreshInterval=setInterval(()=>{if(user)loadChatMessages().catch(e=>console.warn("Sohbet yenileme:",e));},4000);
  if(dataChannel)sb.removeChannel(dataChannel);
  dataChannel=sb.channel("studyflow-live-data")
   .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},()=>{if(user)loadFriends().catch(()=>{});})
@@ -604,10 +606,8 @@ document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
  $("pageTitle").textContent=b.textContent.trim();
  if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
- if(chatRefreshInterval){clearInterval(chatRefreshInterval);chatRefreshInterval=null;}
  if(b.dataset.view==="chat"){
   loadChatMessages().catch(e=>msg("Mesajlar alınamadı: "+e.message,"chatMsg"));
-  chatRefreshInterval=setInterval(()=>{if(user&&$("chat").classList.contains("active"))loadChatMessages().catch(e=>msg("Sohbet yenilenemedi: "+e.message,"chatMsg"));},2000);
  }
 });
 if(configured){
