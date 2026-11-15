@@ -273,7 +273,7 @@ async function loadFriends(){
  renderFriends();
 }
 function renderFriends(){
- const html=friends.map(f=>`<div class="row"><img src="${escapeHtml(f.avatar_url||"")}" alt="" onerror="this.style.display='none'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">@${escapeHtml(f.username)}</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
+ const html=friends.map(f=>`<div class="row"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
 }
