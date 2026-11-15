@@ -575,6 +575,12 @@ async function startPresence(){
  friendsRefreshInterval=setInterval(()=>{if(user)loadFriends().catch(()=>{});},5000);
  if(presenceChannel)sb.removeChannel(presenceChannel);
  presenceChannel=sb.channel("studyflow-friend-presence").on("postgres_changes",{event:"*",schema:"public",table:"user_presence"},()=>{if(user)loadFriends().catch(()=>{});}).subscribe();
+ if(chatChannel)sb.removeChannel(chatChannel);
+ chatChannel=sb.channel("studyflow-chat")
+  .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(e=>msg(e.message,"chatMsg"));})
+  .subscribe((status)=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")msg("Canlı bağlantı kurulamadı; otomatik yenileme devrede.","chatMsg");});
+ if(chatRefreshInterval)clearInterval(chatRefreshInterval);
+ chatRefreshInterval=setInterval(()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(()=>{});},3000);
  if(dataChannel)sb.removeChannel(dataChannel);
  dataChannel=sb.channel("studyflow-live-data")
   .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},()=>{if(user)loadFriends().catch(()=>{});})
