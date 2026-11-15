@@ -41,6 +41,14 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .progress{height:9px;background:#101429;border-radius:20px;overflow:hidden;margin:10px 0}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--blue));border-radius:20px}.topic-actions{display:flex;gap:7px;flex-wrap:wrap}.topic-actions button{padding:7px 10px;font-size:11px}.topic-done{opacity:.68}.topic-done strong{text-decoration:line-through}.subject-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:800px){.sidebar{width:190px}.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
 @media(max-width:620px){.shell{display:block}.sidebar{width:100%;padding:10px;position:sticky;top:0;z-index:3}.sidebar .logo{margin:4px 8px 10px;font-size:20px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;width:auto;padding:9px;font-size:12px}.main{padding:17px 12px}.top{align-items:flex-start}.stats{gap:9px}.card{padding:14px}.value{font-size:22px}.formrow{grid-template-columns:1fr}.clock{font-size:40px}}
+
+.ags-countdown{margin:0 0 16px;padding:18px;background:linear-gradient(115deg,#28245a,#173b63);border:1px solid #4b5590;border-radius:16px}
+.ags-countdown-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.ags-countdown-title{font-weight:800;font-size:17px}.ags-countdown-date{font-size:12px;color:#c4c9ee;margin-top:4px}
+.ags-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:15px}
+.ags-time-unit{background:#10142999;border:1px solid #ffffff18;border-radius:11px;padding:11px 6px;text-align:center}
+.ags-time-number{font-size:clamp(23px,4vw,34px);font-weight:850;font-variant-numeric:tabular-nums}
+.ags-time-label{font-size:10px;letter-spacing:1px;color:#c4c9ee;margin-top:3px}
 </style>
 </head>
 <body>
@@ -70,6 +78,16 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 <header class="top"><div><h1 id="pageTitle">Ana Panel</h1><div class="muted">Birlikte çalış, birlikte ilerle.</div></div><span class="pill" id="connection">Bağlanıyor…</span></header>
 
 <section class="view active" id="home">
+
+ <div class="ags-countdown" aria-label="AGS sınavına geri sayım">
+  <div class="ags-countdown-head"><div><div class="ags-countdown-title">2027 AGS'ye kalan süre</div><div class="ags-countdown-date">8 Mayıs 2027 Cumartesi · 10.15 hedef saati</div></div><span class="pill">HEDEFİNE ODAKLAN</span></div>
+  <div class="ags-countdown-grid">
+   <div class="ags-time-unit"><div class="ags-time-number" id="agsDays">---</div><div class="ags-time-label">GÜN</div></div>
+   <div class="ags-time-unit"><div class="ags-time-number" id="agsHours">--</div><div class="ags-time-label">SAAT</div></div>
+   <div class="ags-time-unit"><div class="ags-time-number" id="agsMinutes">--</div><div class="ags-time-label">DAKİKA</div></div>
+   <div class="ags-time-unit"><div class="ags-time-number" id="agsSeconds">--</div><div class="ags-time-label">SANİYE</div></div>
+  </div>
+ </div>
  <div class="grid stats">
   <div class="card"><div class="kicker">Bugünkü çalışma</div><div class="value" id="todayTime">00:00:00</div></div>
   <div class="card"><div class="kicker">Günlük seri</div><div class="value" id="myStreak">0 🔥</div></div>
@@ -304,6 +322,18 @@ $("addTopic").onclick=async()=>{
 $("subjectFilter").onchange=renderCourses;
 async function updateTopic(id,patch){const {error}=await sb.from("study_topics").update(patch).eq("id",id).eq("user_id",user.id);if(error)return alert(error.message);await loadCourses();}
 async function toggleReview(id){const t=studyTopics.find(x=>x.id===id);if(!t)return;if(t.review_date)return updateTopic(id,{review_date:null});const d=prompt("Tekrar tarihi (YYYY-AA-GG):",new Date(Date.now()+86400000).toLocaleDateString('sv-SE'));if(d===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert("Tarihi YYYY-AA-GG biçiminde gir.");await updateTopic(id,{review_date:d});}
+
+
+function updateAgsCountdown(){
+ const target=new Date(2027,4,8,10,15,0,0).getTime();
+ const diff=Math.max(0,target-Date.now());
+ const days=Math.floor(diff/86400000),hours=Math.floor(diff%86400000/3600000),minutes=Math.floor(diff%3600000/60000),seconds=Math.floor(diff%60000/1000);
+ $("agsDays").textContent=String(days);
+ $("agsHours").textContent=String(hours).padStart(2,"0");
+ $("agsMinutes").textContent=String(minutes).padStart(2,"0");
+ $("agsSeconds").textContent=String(seconds).padStart(2,"0");
+}
+updateAgsCountdown();setInterval(updateAgsCountdown,1000);
 
 function paint(){ $("clock").textContent=fmt(timerSeconds);$("clock2").textContent=fmt(timerSeconds);}
 function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();}
