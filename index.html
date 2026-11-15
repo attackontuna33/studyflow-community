@@ -69,6 +69,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 <aside class="sidebar"><div class="logo">✦ STUDYFLOW</div><div class="nav">
 <button class="active" data-view="home">◫ Ana Panel</button>
 <button data-view="friends">♧ Arkadaşlar</button>
+<button data-view="chat">☰ Genel Sohbet</button>
 <button data-view="ranking">♛ Sıralama</button>
 <button data-view="timerView">◷ Kronometre</button>
 <button data-view="courses">▤ Derslerim</button>
@@ -114,6 +115,17 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  <div class="grid layout">
   <div class="card"><div class="title">Gelen istekler</div><div id="incoming" class="empty">Bekleyen istek yok.</div></div>
   <div class="card"><div class="title">Arkadaşlarım</div><div id="friendsList" class="empty">Henüz arkadaş eklemedin.</div></div>
+ </div>
+</section>
+
+
+<section class="view" id="chat">
+ <div class="card">
+  <div class="title">Genel sohbet</div>
+  <div class="small">Onaylı arkadaşlarınla ortak sohbet. Her mesaj gönderildikten 24 saat sonra sohbetten kaybolur.</div>
+  <div id="chatMessages" style="height:min(55vh,520px);min-height:260px;overflow-y:auto;margin:14px 0;padding:10px;background:#101429;border:1px solid var(--line);border-radius:12px"><div class="empty">Mesajlar yükleniyor…</div></div>
+  <div style="display:flex;gap:8px;align-items:flex-end"><textarea id="chatInput" rows="2" maxlength="1000" placeholder="Bir mesaj yaz…" style="flex:1;min-width:0;padding:12px;background:#101429;border:1px solid var(--line);border-radius:9px;color:white;resize:vertical"></textarea><button id="chatSend" type="button">Gönder</button></div>
+  <div id="chatMsg" class="small" aria-live="polite"></div>
  </div>
 </section>
 
@@ -187,7 +199,7 @@ const configured = SUPABASE_URL.startsWith("https://") &&
 const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 const $ = id => document.getElementById(id);
 let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null;
-let presenceInterval=null, presenceChannel=null, dataChannel=null;
+let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null;
 
 function msg(t,el="authMsg"){ $(el).textContent=t; }
 function cleanUsername(s){return s.trim().toLowerCase();}
@@ -226,7 +238,7 @@ async function afterLogin(u){
  const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
  if(error)throw error;profile=data;
  showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;renderMyAvatar();
- await loadFriends();await refreshDashboard();await loadCourses();startPresence();setConnection(true);
+ await loadFriends();await refreshDashboard();await loadCourses();startPresence();await loadChatMessages();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
 $("deleteMyAccount").onclick=async()=>{
@@ -521,6 +533,36 @@ async function saveTimer(){
 ["reset","reset2"].forEach(id=>$(id).onclick=resetTimer);
 ["saveSession","save2"].forEach(id=>$(id).onclick=saveTimer);
 
+
+async function loadChatMessages(){
+ if(!user)return;
+ const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
+ const {data,error}=await sb.from("chat_messages").select("id,sender_id,body,created_at,profiles:sender_id(username,display_name,avatar_url)").gte("created_at",cutoff).order("created_at",{ascending:true}).limit(300);
+ if(error)throw error;
+ const box=$("chatMessages");
+ if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';return;}
+ box.innerHTML=data.map(m=>{
+  const mine=m.sender_id===user.id;
+  const name=m.profiles?.display_name||m.profiles?.username||"Arkadaş";
+  const time=new Date(m.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+  return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:9px 0"><div style="max-width:85%;padding:10px 12px;border-radius:12px;background:'+(mine?'#373064':'#222744')+'"><div class="small" style="margin:0 0 5px;color:#c4c9ee">'+escapeHtml(name)+' · '+time+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(m.body)+'</div></div></div>';
+ }).join("");
+ box.scrollTop=box.scrollHeight;
+}
+async function sendChatMessage(){
+ const body=$("chatInput").value.trim();
+ if(!body)return;
+ const button=$("chatSend");button.disabled=true;
+ try{
+  const {error}=await sb.from("chat_messages").insert({sender_id:user.id,body});
+  if(error)throw error;
+  $("chatInput").value="";msg("Mesaj gönderildi.","chatMsg");await loadChatMessages();
+ }catch(e){msg("Mesaj gönderilemedi: "+e.message,"chatMsg");}
+ finally{button.disabled=false;}
+}
+$("chatSend").onclick=sendChatMessage;
+$("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChatMessage();}});
+
 async function heartbeat(){
  if(!user)return;
  const {error}=await sb.from("user_presence").upsert({user_id:user.id,last_seen_at:new Date().toISOString()},{onConflict:"user_id"});
@@ -544,6 +586,8 @@ async function startPresence(){
   .subscribe();
 }
 function stopPresence(){
+  if(chatChannel)sb.removeChannel(chatChannel);chatChannel=null;
+  if(chatRefreshInterval)clearInterval(chatRefreshInterval);chatRefreshInterval=null;
  if(presenceInterval)clearInterval(presenceInterval);presenceInterval=null;
  if(friendsRefreshInterval)clearInterval(friendsRefreshInterval);friendsRefreshInterval=null;
  if(presenceChannel)sb.removeChannel(presenceChannel);presenceChannel=null;
@@ -552,7 +596,7 @@ function stopPresence(){
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
- $("pageTitle").textContent=b.textContent.trim();if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
+ $("pageTitle").textContent=b.textContent.trim();if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));if(b.dataset.view==="chat")loadChatMessages().catch(e=>msg(e.message,"chatMsg"));
 });
 if(configured){
  sb.auth.getSession().then(async({data})=>{if(data.session){try{await afterLogin(data.session.user)}catch(e){msg(e.message);}}});
