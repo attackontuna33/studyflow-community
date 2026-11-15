@@ -580,7 +580,7 @@ async function startPresence(){
   .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(e=>msg(e.message,"chatMsg"));})
   .subscribe((status)=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")msg("Canlı bağlantı kurulamadı; otomatik yenileme devrede.","chatMsg");});
  if(chatRefreshInterval)clearInterval(chatRefreshInterval);
- chatRefreshInterval=setInterval(()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(()=>{});},3000);
+ // Sohbet yenileme aralığı, kullanıcı Genel Sohbet sekmesini açtığında başlatılır.
  if(dataChannel)sb.removeChannel(dataChannel);
  dataChannel=sb.channel("studyflow-live-data")
   .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},()=>{if(user)loadFriends().catch(()=>{});})
@@ -602,7 +602,13 @@ function stopPresence(){
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(b.dataset.view).classList.add("active");
- $("pageTitle").textContent=b.textContent.trim();if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));if(b.dataset.view==="chat")loadChatMessages().catch(e=>msg(e.message,"chatMsg"));
+ $("pageTitle").textContent=b.textContent.trim();
+ if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
+ if(chatRefreshInterval){clearInterval(chatRefreshInterval);chatRefreshInterval=null;}
+ if(b.dataset.view==="chat"){
+  loadChatMessages().catch(e=>msg("Mesajlar alınamadı: "+e.message,"chatMsg"));
+  chatRefreshInterval=setInterval(()=>{if(user&&$("chat").classList.contains("active"))loadChatMessages().catch(e=>msg("Sohbet yenilenemedi: "+e.message,"chatMsg"));},2000);
+ }
 });
 if(configured){
  sb.auth.getSession().then(async({data})=>{if(data.session){try{await afterLogin(data.session.user)}catch(e){msg(e.message);}}});
