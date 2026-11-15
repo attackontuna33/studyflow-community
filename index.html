@@ -538,18 +538,21 @@ async function loadChatMessages(){
  if(!user||chatLoadInFlight)return;
  chatLoadInFlight=true;
  try {
- const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
- const {data,error}=await sb.from("chat_messages").select("id,sender_id,body,created_at,profiles!chat_messages_sender_id_fkey(username,display_name,avatar_url)").gte("created_at",cutoff).order("created_at",{ascending:true}).limit(300);
- if(error)throw error;
- const box=$("chatMessages");
- if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';return;}
- box.innerHTML=data.map(m=>{
-  const mine=m.sender_id===user.id;
-  const name=m.profiles?.display_name||m.profiles?.username||"Arkadaş";
-  const time=new Date(m.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
-  return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:9px 0"><div style="max-width:85%;padding:10px 12px;border-radius:12px;background:'+(mine?'#373064':'#222744')+'"><div class="small" style="margin:0 0 5px;color:#c4c9ee">'+escapeHtml(name)+' · '+time+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(m.body)+'</div></div></div>';
- }).join("");
- box.scrollTop=box.scrollHeight;
+  const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
+  const {data,error}=await sb.from("chat_messages").select("id,sender_id,body,created_at,profiles!chat_messages_sender_id_fkey(username,display_name,avatar_url)").gte("created_at",cutoff).order("created_at",{ascending:true}).limit(300);
+  if(error)throw error;
+  const box=$("chatMessages");
+  if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';return;}
+  box.innerHTML=data.map(m=>{
+   const mine=m.sender_id===user.id;
+   const name=m.profiles?.display_name||m.profiles?.username||"Arkadaş";
+   const time=new Date(m.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+   return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:9px 0"><div style="max-width:85%;padding:10px 12px;border-radius:12px;background:'+(mine?'#373064':'#222744')+'"><div class="small" style="margin:0 0 5px;color:#c4c9ee">'+escapeHtml(name)+' · '+time+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(m.body)+'</div></div></div>';
+  }).join("");
+  box.scrollTop=box.scrollHeight;
+ } finally {
+  chatLoadInFlight=false;
+ }
 }
 async function sendChatMessage(){
  const body=$("chatInput").value.trim();
