@@ -127,6 +127,15 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="courses">
+ <div class="card" style="margin-bottom:16px">
+  <div class="title">Hazır sınav programları</div>
+  <div class="small">Konu listelerini tek dokunuşla hesabına ekle. Var olan derslerin ve tamamlanma durumların korunur; tekrar eden başlıklar atlanır.</div>
+  <div class="formrow" style="margin-top:12px">
+   <button id="loadAgsPreset">AGS hazır listesini yükle</button>
+   <button id="loadOabtPreset" class="secondary">Sınıf Öğretmenliği ÖABT listesini yükle</button>
+  </div>
+  <div class="small" id="presetMsg" aria-live="polite"></div>
+ </div>
  <div class="grid layout">
   <div class="card">
    <div class="title">Yeni ders ekle</div>
@@ -318,6 +327,58 @@ function renderCourses(){
  document.querySelectorAll('[data-topic-status]').forEach(b=>b.onclick=()=>updateTopic(b.dataset.topicStatus,{status:b.dataset.status,completed_at:b.dataset.status==='completed'?new Date().toISOString():null}));
  document.querySelectorAll('[data-topic-review]').forEach(b=>b.onclick=()=>toggleReview(b.dataset.topicReview));
 }
+
+const studyPresets={
+ AGS:[
+  ["Sözel Yetenek",["Sözcükte Anlam","Cümlede Anlam","Anlatımın Oluşması","Paragrafta Anlam","Sözel Mantık"]],
+  ["Sayısal Yetenek",["Temel Matematik","Grafik ve Tablo Yorumlama","Mantıksal Muhakeme Problemleri"]],
+  ["Tarih",["Osmanlı Öncesi Türk Devletleri Tarihi","Osmanlı Tarihi","Atatürk İlkeleri ve İnkılap Tarihi","Çağdaş Türk ve Dünya Tarihi"]],
+  ["Türkiye Coğrafyası",["Türkiye Fiziki Coğrafyası","Türkiye Beşerî ve Ekonomik Coğrafyası"]],
+  ["Eğitim Bilimleri ve Türk Millî Eğitim Sistemi",["Eğitimin Tarihî, Felsefi, Toplumsal, Ekonomik ve Politik Temelleri","Öğretim Yöntem ve Teknikleri","Sınıf Yönetimi","Program Okuryazarlığı","Eğitimde Ölçme ve Değerlendirme","Öğrenme Psikolojisi","Gelişim Psikolojisi","Rehberlik","Eğitim ve Öğretim Teknolojileri","Türk Millî Eğitim Sisteminin Genel Yapısı","Türkiye Yüzyılı Maarif Modeli"]],
+  ["Mevzuat",["Türkiye Cumhuriyeti Anayasası ve İnsan Hakları Hukuku","1739 Sayılı Millî Eğitim Temel Kanunu","222 Sayılı İlköğretim ve Eğitim Kanunu","7528 Sayılı Öğretmenlik Mesleği Kanunu"]]
+ ],
+ "Sınıf Öğretmenliği ÖABT":[
+  ["İlkokulda Temel Matematik",["Sayılar ve İşlemler","Geometri","Ölçme","Veri İşleme"]],
+  ["İlkokulda Temel Fen Bilimleri",["Canlılar ve Yaşam","Madde ve Doğası","Fiziksel Olaylar","Dünya ve Evren","Fen, Mühendislik ve Girişimcilik Uygulamaları"]],
+  ["Türk Dili",["Ses Bilgisi ve Yazım","Şekil Bilgisi","Sözcük ve Cümle Bilgisi","Anlam Bilgisi","Metin ve Anlatım"]],
+  ["Türk Tarihi ve Kültürü",["İslamiyet Öncesi Türk Tarihi","Türk-İslam Tarihi","Osmanlı Tarihi","Türkiye Cumhuriyeti Tarihi","Türk Kültür ve Medeniyeti"]],
+  ["Türkiye Coğrafyası ve Jeopolitiği",["Türkiye'nin Fiziki Coğrafyası","Türkiye'nin Beşerî Coğrafyası","Türkiye'nin Ekonomik Coğrafyası","Türkiye'nin Jeopolitik Konumu"]],
+  ["Çocuk Edebiyatı",["Çocuk Edebiyatının Temel Kavramları","Çocuk Edebiyatı Türleri","Çocuk Kitaplarında Nitelik ve Tasarım","Çocuk Edebiyatı ve Çocuk Gelişimi"]],
+  ["Alan Eğitimi",["Hayat Bilgisi Öğretimi","Sosyal Bilgiler Öğretimi","Din Kültürü ve Ahlak Bilgisi Öğretimi","Fen Bilgisi Öğretimi","Drama","Görsel Sanatlar Öğretimi","Müzik Öğretimi","Matematik Öğretimi","İlk Okuma ve Yazma Öğretimi"]]
+ ]
+};
+async function loadStudyPreset(key){
+ const preset=studyPresets[key];if(!preset)return;
+ const button=$(key==="AGS"?"loadAgsPreset":"loadOabtPreset");
+ button.disabled=true;
+ try{
+  const {data:subjects,error:subjectError}=await sb.from("study_subjects").select("id,name,exam").eq("user_id",user.id);
+  if(subjectError)throw subjectError;
+  const exam=key==="AGS"?"AGS":"ÖABT";
+  const existing=(subjects||[]).filter(s=>s.exam===exam);
+  let addedSubjects=0,addedTopics=0;
+  for(const [name,topics] of preset){
+   let subject=existing.find(s=>s.name.trim().toLocaleLowerCase("tr-TR")===name.toLocaleLowerCase("tr-TR"));
+   if(!subject){
+    const {data,error}=await sb.from("study_subjects").insert({user_id:user.id,name,exam}).select("id,name,exam").single();
+    if(error)throw error;subject=data;existing.push(subject);addedSubjects++;
+   }
+   const {data:oldTopics,error:topicError}=await sb.from("study_topics").select("title").eq("user_id",user.id).eq("subject_id",subject.id);
+   if(topicError)throw topicError;
+   const oldSet=new Set((oldTopics||[]).map(t=>t.title.trim().toLocaleLowerCase("tr-TR")));
+   const rows=topics.filter(t=>!oldSet.has(t.toLocaleLowerCase("tr-TR"))).map(title=>({user_id:user.id,subject_id:subject.id,title}));
+   for(let i=0;i<rows.length;i+=100){
+    const {error}=await sb.from("study_topics").insert(rows.slice(i,i+100));if(error)throw error;
+    addedTopics+=rows.slice(i,i+100).length;
+   }
+  }
+  await loadCourses();
+  msg(addedSubjects+" ders ve "+addedTopics+" konu eklendi. Önceden bulunanlar ve ilerleme kayıtların korundu.","presetMsg");
+ }catch(e){msg("Yükleme tamamlanamadı: "+e.message,"presetMsg");}
+ finally{button.disabled=false;}
+}
+$("loadAgsPreset").onclick=()=>loadStudyPreset("AGS");
+$("loadOabtPreset").onclick=()=>loadStudyPreset("Sınıf Öğretmenliği ÖABT");
 $("addSubject").onclick=async()=>{
  const name=$("newSubjectName").value.trim(),exam=$("newSubjectExam").value;
  if(!name)return msg("Ders adını yaz.","subjectMsg");
