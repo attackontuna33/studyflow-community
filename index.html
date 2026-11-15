@@ -167,6 +167,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 
 <section class="view" id="account">
  <div class="card"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
+ <div class="card" style="margin-top:16px;border-color:#713b59"><div class="title">Hesabımı sil</div><div class="muted">Yalnızca kendi hesabını silebilirsin. Hesabın ve ilişkili çalışma verilerin kalıcı olarak silinir.</div><button class="danger" id="deleteMyAccount" style="margin-top:14px">Kendi hesabımı kalıcı olarak sil</button><div class="small" id="deleteAccountMsg" aria-live="polite"></div></div>
 </section>
 </main></div></div>
 
@@ -223,6 +224,16 @@ async function afterLogin(u){
  await loadFriends();await refreshDashboard();await loadCourses();startPresence();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
+$("deleteMyAccount").onclick=async()=>{
+ const confirmation=prompt("Hesabını ve ilişkili verilerini kalıcı olarak silmek için SİL yaz.");
+ if(confirmation!=="SİL")return;
+ const button=$("deleteMyAccount");button.disabled=true;
+ try{
+  const {error}=await sb.rpc("delete_my_account");
+  if(error)throw error;
+  stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();
+ }catch(e){$("deleteAccountMsg").textContent="Silme işlemi başarısız: "+e.message;button.disabled=false;}
+};
 function setConnection(ok){$("connection").textContent=ok?"Bağlı":"Bağlantı bekleniyor";$("connection").style.background=ok?"#174b40":"#4a3a29";}
 
 async function loadFriends(){
@@ -322,12 +333,18 @@ function renderCourses(){
  $("courseProgress").innerHTML=visible.map(sub=>{
   const ts=studyTopics.filter(t=>t.subject_id===sub.id),done=ts.filter(t=>t.status==="completed").length,pct=ts.length?Math.round(done/ts.length*100):0;
   const rows=ts.map(t=>`<div class="row ${t.status==='completed'?'topic-done':''}"><div class="grow"><strong>${escapeHtml(t.title)}</strong><div class="small">${t.status==='completed'?'Tamamlandı':t.status==='in_progress'?'Çalışılıyor':'Bekliyor'}${t.review_date?' · Tekrar: '+escapeHtml(t.review_date):''}</div></div><div class="topic-actions"><button class="secondary" data-topic-status="${t.id}" data-status="${t.status==='completed'?'pending':'completed'}">${t.status==='completed'?'Geri al':'Tamamla'}</button><button class="secondary" data-topic-review="${t.id}">${t.review_date?'Tekrarı kaldır':'Tekrar ekle'}</button><button class="danger" data-topic-delete="${t.id}">Sil</button></div></div>`).join("");
-  return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="subject-head"><div><strong>${escapeHtml(sub.name)}</strong> <span class="pill">${escapeHtml(sub.exam)}</span></div><div class="topic-actions"><span class="small">${done}/${ts.length} konu · %${pct}</span><button class="danger" data-subject-delete="${sub.id}">Dersi sil</button></div></div><div class="progress"><span style="width:${pct}%"></span></div>${rows||'<div class="empty">Bu derse henüz konu eklenmedi.</div>'}</div>`;
+  return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div class="subject-head"><div class="topic-actions"><button class="secondary" style="padding:5px 9px" data-subject-toggle="${sub.id}" aria-expanded="true" title="Dersi küçült">⌄</button><strong>${escapeHtml(sub.name)}</strong> <span class="pill">${escapeHtml(sub.exam)}</span></div><div class="topic-actions"><span class="small">${done}/${ts.length} konu · %${pct}</span><button class="danger" data-subject-delete="${sub.id}">Dersi sil</button></div></div><div class="progress" data-subject-content="${sub.id}"><span style="width:${pct}%"></span></div><div data-subject-content="${sub.id}">${rows||'<div class="empty">Bu derse henüz konu eklenmedi.</div>'}</div></div>`;
  }).join("");
  document.querySelectorAll('[data-topic-status]').forEach(b=>b.onclick=()=>updateTopic(b.dataset.topicStatus,{status:b.dataset.status,completed_at:b.dataset.status==='completed'?new Date().toISOString():null}));
  document.querySelectorAll('[data-topic-review]').forEach(b=>b.onclick=()=>toggleReview(b.dataset.topicReview));
  document.querySelectorAll('[data-topic-delete]').forEach(b=>b.onclick=()=>deleteTopic(b.dataset.topicDelete));
  document.querySelectorAll('[data-subject-delete]').forEach(b=>b.onclick=()=>deleteSubject(b.dataset.subjectDelete));
+ document.querySelectorAll('[data-subject-toggle]').forEach(b=>b.onclick=()=>{
+  const id=b.dataset.subjectToggle,parts=document.querySelectorAll('[data-subject-content="'+id+'"]');
+  const isOpen=b.getAttribute("aria-expanded")==="true";
+  parts.forEach(el=>el.style.display=isOpen?"none":"");
+  b.setAttribute("aria-expanded",String(!isOpen));b.textContent=isOpen?"›":"⌄";b.title=isOpen?"Dersi genişlet":"Dersi küçült";
+ });
 }
 
 const studyPresets={
