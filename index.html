@@ -140,6 +140,14 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
    <label>Konu adı</label><input id="newTopicName" maxlength="120" placeholder="Örn. Öğrenme psikolojisi">
    <button id="addTopic" style="width:100%;margin-top:12px">Konu ekle</button><div class="small" id="topicMsg"></div>
   </div>
+  <div class="card">
+   <div class="title">Toplu konu ekle</div>
+   <div class="small">Her satıra bir konu yaz. Aynı derste zaten bulunan konular atlanır.</div>
+   <label>Ders</label><select id="bulkTopicSubject"><option value="">Önce ders ekle</option></select>
+   <label>Konu listesi</label><textarea id="bulkTopicNames" rows="7" maxlength="20000" placeholder="Öğrenme psikolojisine giriş&#10;Gelişim psikolojisi&#10;Öğretim yöntemleri" style="width:100%;padding:12px;background:#101429;border:1px solid var(--line);border-radius:9px;color:white;resize:vertical"></textarea>
+   <button id="bulkAddTopics" style="width:100%;margin-top:12px">Konuları topluca ekle</button>
+   <div class="small" id="bulkTopicMsg" aria-live="polite"></div>
+  </div>
  </div>
  <div class="card" style="margin-top:16px">
   <div class="subject-head"><div><div class="title" style="margin:0">Ders ve konu ilerlemem</div><div class="small">Konu durumlarını güncelle; ilerlemen otomatik hesaplanır.</div></div><select id="subjectFilter" style="max-width:220px"><option value="all">Tüm dersler</option><option value="AGS">AGS</option><option value="ÖABT">ÖABT</option><option value="Genel">Genel / Diğer</option></select></div>
@@ -296,6 +304,9 @@ function renderCourses(){
  const select=$("topicSubject"),keep=select.value;
  select.innerHTML=studySubjects.map(x=>`<option value="${x.id}">${escapeHtml(x.exam)} · ${escapeHtml(x.name)}</option>`).join("")||'<option value="">Önce ders ekle</option>';
  if(studySubjects.some(x=>x.id===keep))select.value=keep;
+ const bulkSelect=$("bulkTopicSubject"),bulkKeep=bulkSelect.value;
+ bulkSelect.innerHTML=select.innerHTML;
+ if(studySubjects.some(x=>x.id===bulkKeep))bulkSelect.value=bulkKeep;
  const filter=$("subjectFilter").value;
  const visible=studySubjects.filter(x=>filter==="all"||x.exam===filter);
  if(!visible.length){$("courseProgress").innerHTML='<div class="empty">Henüz ders eklemedin. Yukarıdan ilk dersini oluşturabilirsin.</div>';return;}
@@ -318,6 +329,25 @@ $("addTopic").onclick=async()=>{
  if(!subject_id)return msg("Önce bir ders oluştur.","topicMsg");if(!title)return msg("Konu adını yaz.","topicMsg");
  const {error}=await sb.from("study_topics").insert({user_id:user.id,subject_id,title});
  if(error)return msg(error.message,"topicMsg");$("newTopicName").value="";msg("Konu eklendi.","topicMsg");await loadCourses();
+};
+$("bulkAddTopics").onclick=async()=>{
+ const subject_id=$("bulkTopicSubject").value;
+ const raw=$("bulkTopicNames").value;
+ if(!subject_id)return msg("Önce ders seç.","bulkTopicMsg");
+ const pasted=raw.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+ const unique=[...new Set(pasted)];
+ if(!unique.length)return msg("Eklemek için konu listesini yapıştır.","bulkTopicMsg");
+ const existing=new Set(studyTopics.filter(t=>t.subject_id===subject_id).map(t=>t.title.trim().toLocaleLowerCase("tr-TR")));
+ const fresh=unique.filter(title=>!existing.has(title.toLocaleLowerCase("tr-TR")));
+ if(!fresh.length)return msg("Yeni konu bulunamadı; listedekiler zaten ekli.","bulkTopicMsg");
+ const rows=fresh.map(title=>({user_id:user.id,subject_id,title:title.slice(0,120)}));
+ for(let i=0;i<rows.length;i+=100){
+  const {error}=await sb.from("study_topics").insert(rows.slice(i,i+100));
+  if(error)return msg("Kayıt sırasında hata: "+error.message,"bulkTopicMsg");
+ }
+ $("bulkTopicNames").value="";
+ msg(fresh.length+" konu eklendi. "+(unique.length-fresh.length)+" tekrar eden konu atlandı.","bulkTopicMsg");
+ await loadCourses();
 };
 $("subjectFilter").onchange=renderCourses;
 async function updateTopic(id,patch){const {error}=await sb.from("study_topics").update(patch).eq("id",id).eq("user_id",user.id);if(error)return alert(error.message);await loadCourses();}
