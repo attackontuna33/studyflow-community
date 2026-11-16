@@ -278,6 +278,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  <div class="card">
   <div class="title">Genel sohbet</div>
   <div class="small">Onaylı arkadaşlarınla ortak sohbet. Her mesaj gönderildikten 24 saat sonra sohbetten kaybolur.</div>
+  <div id="chatActiveUsers" class="small" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px;background:#101429;border:1px solid var(--line);border-radius:10px"><span class="muted">Aktif kişiler yükleniyor…</span></div>
   <div id="chatMessages" style="height:min(55vh,520px);min-height:260px;overflow-y:auto;margin:14px 0;padding:10px;background:#101429;border:1px solid var(--line);border-radius:12px"><div class="empty">Mesajlar yükleniyor…</div></div>
   <div style="display:flex;gap:8px;align-items:flex-end"><textarea id="chatInput" rows="2" maxlength="1000" placeholder="Bir mesaj yaz…" style="flex:1;min-width:0;padding:12px;background:#101429;border:1px solid var(--line);border-radius:9px;color:white;resize:vertical"></textarea><button id="chatSend" type="button">Gönder</button></div>
   <div id="chatMsg" class="small" aria-live="polite"></div>
@@ -572,10 +573,18 @@ function formatLastSeen(value){
  if(date.toDateString()===yesterday.toDateString())return "Son görülme: dün "+time;
  return "Son görülme: "+date.toLocaleDateString("tr-TR",{day:"2-digit",month:"short",year:date.getFullYear()===now.getFullYear()?undefined:"numeric"})+" "+time;
 }
+function renderChatActiveUsers(){
+ const el=$("chatActiveUsers");if(!el)return;
+ const active=friends.filter(f=>f.online);
+ const meName=profile?.display_name||profile?.username||"Sen";
+ const people=[{id:"me",name:meName,me:true},...active.map(f=>({id:f.id,name:f.display_name||f.username}))];
+ el.innerHTML="<strong style='width:100%;font-size:12px;color:#aeb5d8'>Şu an aktif · "+people.length+"</strong>"+people.map(p=>"<span style='display:inline-flex;align-items:center;gap:6px;padding:5px 8px;background:#222744;border-radius:20px;font-size:12px'><i class='dot online'></i>"+escapeHtml(p.name)+(p.me?" (sen)":"")+"</span>").join("");
+}
 function renderFriends(){
  const html=friends.map(f=>`<div class="row friend-row-open" data-friend-profile="${f.id}" role="button" tabindex="0" title="Planlarını görüntüle"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">Profili ve çalışma planını gör</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":formatLastSeen(f.lastSeenAt)}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
+ renderChatActiveUsers();
  document.querySelectorAll("[data-friend-profile]").forEach(row=>{
   row.onclick=()=>openFriendProfile(row.dataset.friendProfile);
   row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openFriendProfile(row.dataset.friendProfile);}};
