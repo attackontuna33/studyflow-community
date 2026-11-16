@@ -73,6 +73,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 <button data-view="ranking">♛ Sıralama</button>
 <button data-view="timerView">◷ Kronometre</button>
 <button data-view="courses">▤ Derslerim</button>
+<button data-view="planner">▦ Çalışma Planı</button>
 <button data-view="account">⚙ Hesap</button>
 </div><div style="margin:25px 8px 0" class="small" id="meLabel"></div><button class="secondary" id="logout" style="width:100%;margin-top:12px">Çıkış yap</button></aside>
 <main class="main">
@@ -175,6 +176,35 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
   <div id="courseProgress" class="empty">Derslerin yükleniyor…</div>
  </div>
  <div class="notice">Derslerin ve konu ilerlemen kişiseldir. Arkadaşların bu ayrıntıları göremez.</div>
+</section>
+
+<section class="view" id="planner">
+ <div class="card" style="margin-bottom:16px">
+  <div class="subject-head"><div><div class="title" style="margin:0">Haftalık çalışma takvimin</div><div class="small">Planını oluştur, tamamladıklarını işaretle ve haftalık ilerlemeni takip et.</div></div><div class="topic-actions"><button class="secondary" id="plannerPrev">← Önceki</button><button class="secondary" id="plannerToday">Bu hafta</button><button class="secondary" id="plannerNext">Sonraki →</button></div></div>
+  <div id="plannerWeekLabel" class="pill" style="margin-top:12px">Bu hafta</div>
+  <div class="grid stats" style="margin-top:14px">
+   <div class="card"><div class="kicker">Planlanan süre</div><div class="value" id="plannedTotal">0 dk</div></div>
+   <div class="card"><div class="kicker">Tamamlanan süre</div><div class="value" id="plannedDone">0 dk</div></div>
+   <div class="card"><div class="kicker">Tamamlanan görev</div><div class="value" id="plannedCount">0/0</div></div>
+  </div>
+  <div id="plannerDays" class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px"></div>
+ </div>
+ <div class="card" style="margin-bottom:16px">
+  <div class="title">Yeni çalışma görevi</div>
+  <div class="formrow">
+   <div><label>Tarih</label><input id="planDate" type="date"></div>
+   <div><label>Ders</label><select id="planSubject"><option value="">Ders seç</option></select></div>
+   <div><label>Konu (isteğe bağlı)</label><select id="planTopic"><option value="">Konu seç (isteğe bağlı)</option></select></div>
+   <div><label>Hedef süre (dakika)</label><input id="planMinutes" type="number" min="5" max="1440" step="5" value="60"></div>
+  </div>
+  <button id="addPlan" style="width:100%;margin-top:14px">Takvime ekle</button>
+  <div class="small" id="planMsg" aria-live="polite"></div>
+ </div>
+ <div class="card">
+  <div class="title" id="selectedDayTitle">Günün görevleri</div>
+  <div id="dayPlans" class="empty">Görevler yükleniyor…</div>
+ </div>
+ <div class="notice">Çalışma planların yalnızca kendi hesabında saklanır. Planı tamamlandı olarak işaretlemek kronometre kayıtlarından bağımsızdır.</div>
 </section>
 
 <section class="view" id="account">
@@ -379,6 +409,7 @@ async function loadCourses(){
   sb.from("study_topics").select("id,subject_id,title,status,review_date,completed_at,created_at").eq("user_id",user.id).order("created_at",{ascending:true})
  ]);
  if(se)throw se;if(te)throw te;studySubjects=subs||[];studyTopics=topics||[];renderCourses();
+ if($("planSubject"))refreshPlanSubjectOptions();
 }
 function renderCourses(){
  const select=$("topicSubject"),keep=select.value;
@@ -511,6 +542,84 @@ async function updateTopic(id,patch){const {error}=await sb.from("study_topics")
 async function toggleReview(id){const t=studyTopics.find(x=>x.id===id);if(!t)return;if(t.review_date)return updateTopic(id,{review_date:null});const d=prompt("Tekrar tarihi (YYYY-AA-GG):",new Date(Date.now()+86400000).toLocaleDateString('sv-SE'));if(d===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return alert("Tarihi YYYY-AA-GG biçiminde gir.");await updateTopic(id,{review_date:d});}
 
 
+// Haftalık çalışma planı
+let plannerWeekStart=null, plannerSelectedDate=null, plannerRows=[];
+function dateKey(d){const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");}
+function parseLocalDate(value){const [y,m,d]=value.split("-").map(Number);return new Date(y,m-1,d,12);}
+function shiftDate(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function startOfWeek(d){const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
+function plannerRangeLabel(start){const end=shiftDate(start,6);return start.toLocaleDateString("tr-TR",{day:"numeric",month:"long"})+" – "+end.toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric"});}
+async function loadPlanner(){
+ if(!user)return;
+ if(!plannerWeekStart)plannerWeekStart=startOfWeek(new Date());
+ if(!plannerSelectedDate)plannerSelectedDate=dateKey(new Date());
+ const end=shiftDate(plannerWeekStart,6);
+ const {data,error}=await sb.from("study_plans").select("id,plan_date,subject,topic,planned_minutes,completed").eq("user_id",user.id).gte("plan_date",dateKey(plannerWeekStart)).lte("plan_date",dateKey(end)).order("plan_date",{ascending:true}).order("created_at",{ascending:true});
+ if(error){msg("Planlar yüklenemedi: "+error.message,"planMsg");return;}
+ plannerRows=data||[];renderPlanner();
+}
+function renderPlanner(){
+ $("plannerWeekLabel").textContent=plannerRangeLabel(plannerWeekStart);
+ const total=plannerRows.reduce((a,p)=>a+Number(p.planned_minutes||0),0);
+ const done=plannerRows.filter(p=>p.completed).reduce((a,p)=>a+Number(p.planned_minutes||0),0);
+ const completedCount=plannerRows.filter(p=>p.completed).length;
+ $("plannedTotal").textContent=total+" dk";$("plannedDone").textContent=done+" dk";$("plannedCount").textContent=completedCount+"/"+plannerRows.length;
+ const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+ $("plannerDays").innerHTML=names.map((name,i)=>{
+  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate;
+  return '<button type="button" class="'+(active?'':'secondary')+'" data-planner-day="'+key+'" style="padding:10px 4px;min-width:0;background:'+(active?'linear-gradient(100deg,var(--purple),var(--blue))':'#303653')+'"><span style="display:block;font-size:11px">'+name+'</span><strong style="display:block;font-size:18px;margin:5px 0">'+d.getDate()+'</strong><span style="display:block;font-size:10px">'+rows.length+' görev</span><span style="display:block;font-size:10px;color:#c4c9ee">'+minutes+' dk</span></button>';
+ }).join("");
+ document.querySelectorAll("[data-planner-day]").forEach(b=>b.onclick=()=>{plannerSelectedDate=b.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
+ const chosen=parseLocalDate(plannerSelectedDate);
+ $("selectedDayTitle").textContent="Görevler · "+chosen.toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long"});
+ const rows=plannerRows.filter(p=>p.plan_date===plannerSelectedDate);
+ $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong><div class="small">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="topic-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
+ document.querySelectorAll("[data-plan-toggle]").forEach(b=>b.onclick=()=>togglePlan(b.dataset.planToggle));
+ document.querySelectorAll("[data-plan-delete]").forEach(b=>b.onclick=()=>deletePlan(b.dataset.planDelete));
+}
+function refreshPlanTopicOptions(){
+ const subjectId=$("planSubject").value,topics=studyTopics.filter(t=>t.subject_id===subjectId);
+ $("planTopic").innerHTML='<option value="">Konu seç (isteğe bağlı)</option>'+topics.map(t=>'<option value="'+t.id+'">'+escapeHtml(t.title)+'</option>').join("");
+}
+function refreshPlanSubjectOptions(){
+ const current=$("planSubject").value;
+ $("planSubject").innerHTML='<option value="">Ders seç</option>'+studySubjects.map(x=>'<option value="'+x.id+'">'+escapeHtml(x.exam)+" · "+escapeHtml(x.name)+'</option>').join("");
+ if(studySubjects.some(x=>String(x.id)===current))$("planSubject").value=current;
+ refreshPlanTopicOptions();
+}
+$("planSubject").onchange=refreshPlanTopicOptions;
+$("planDate").onchange=()=>{if($("planDate").value){plannerSelectedDate=$("planDate").value;const picked=parseLocalDate(plannerSelectedDate);plannerWeekStart=startOfWeek(picked);loadPlanner();}};
+$("addPlan").onclick=async()=>{
+ const plan_date=$("planDate").value,subjectId=$("planSubject").value,topicId=$("planTopic").value,minutes=Number($("planMinutes").value);
+ const subject=studySubjects.find(x=>String(x.id)===subjectId);
+ const topic=studyTopics.find(x=>String(x.id)===topicId);
+ if(!plan_date)return msg("Önce tarih seç.","planMsg");
+ if(!subject)return msg("Bir ders seç.","planMsg");
+ if(!Number.isInteger(minutes)||minutes<5||minutes>1440)return msg("Süre 5 ile 1440 dakika arasında olmalı.","planMsg");
+ const button=$("addPlan");button.disabled=true;
+ try{
+  const {error}=await sb.from("study_plans").insert({user_id:user.id,plan_date,subject:subject.name,topic:topic?.title||null,planned_minutes:minutes});
+  if(error)throw error;
+  plannerSelectedDate=plan_date;plannerWeekStart=startOfWeek(parseLocalDate(plan_date));msg("Görev takvime eklendi.","planMsg");await loadPlanner();
+ }catch(e){msg("Görev eklenemedi: "+e.message,"planMsg");}
+ finally{button.disabled=false;}
+};
+async function togglePlan(id){
+ const row=plannerRows.find(p=>String(p.id)===String(id));if(!row)return;
+ const {error}=await sb.from("study_plans").update({completed:!row.completed}).eq("id",id).eq("user_id",user.id);
+ if(error)return msg("Görev güncellenemedi: "+error.message,"planMsg");
+ await loadPlanner();
+}
+async function deletePlan(id){
+ if(!confirm("Bu çalışma görevini silmek istiyor musun?"))return;
+ const {error}=await sb.from("study_plans").delete().eq("id",id).eq("user_id",user.id);
+ if(error)return msg("Görev silinemedi: "+error.message,"planMsg");
+ await loadPlanner();
+}
+$("plannerPrev").onclick=()=>{plannerWeekStart=shiftDate(plannerWeekStart,-7);plannerSelectedDate=dateKey(plannerWeekStart);$("planDate").value=plannerSelectedDate;loadPlanner();};
+$("plannerNext").onclick=()=>{plannerWeekStart=shiftDate(plannerWeekStart,7);plannerSelectedDate=dateKey(plannerWeekStart);$("planDate").value=plannerSelectedDate;loadPlanner();};
+$("plannerToday").onclick=()=>{plannerWeekStart=startOfWeek(new Date());plannerSelectedDate=dateKey(new Date());$("planDate").value=plannerSelectedDate;loadPlanner();};
+
 function updateAgsCountdown(){
  const target=new Date(2027,4,8,10,15,0,0).getTime();
  const diff=Math.max(0,target-Date.now());
@@ -614,6 +723,7 @@ async function startPresence(){
   .on("postgres_changes",{event:"*",schema:"public",table:"daily_stats"},()=>{if(user)refreshDashboard().catch(()=>{});})
   .on("postgres_changes",{event:"*",schema:"public",table:"study_subjects",filter:"user_id=eq."+user.id},()=>{if(user)loadCourses().catch(()=>{});})
   .on("postgres_changes",{event:"*",schema:"public",table:"study_topics",filter:"user_id=eq."+user.id},()=>{if(user)loadCourses().catch(()=>{});})
+  .on("postgres_changes",{event:"*",schema:"public",table:"study_plans",filter:"user_id=eq."+user.id},()=>{if(user&&$("planner").classList.contains("active"))loadPlanner().catch(()=>{});})
   .subscribe();
 }
 function stopPresence(){
@@ -630,6 +740,7 @@ document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  localStorage.setItem("studyflow_active_view",b.dataset.view);
  $("pageTitle").textContent=b.textContent.trim();
  if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
+ if(b.dataset.view==="planner"){refreshPlanSubjectOptions();loadPlanner().catch(e=>msg(e.message,"planMsg"));}
  if(b.dataset.view==="chat"){
   loadChatMessages().catch(e=>msg("Mesajlar alınamadı: "+e.message,"chatMsg"));
  }
