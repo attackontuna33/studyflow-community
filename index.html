@@ -394,7 +394,8 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 
 <section class="view" id="account">
  <div class="card"><div class="title">Profil fotoğrafım</div><div class="row" style="align-items:center"><img id="myAvatar" src="" alt="Profil fotoğrafı" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#303653;display:none"><div class="grow"><input id="avatarFile" type="file" accept="image/*"><div class="small">Telefondan veya tabletten galeriden seçebilirsin. JPG, PNG veya WebP · En fazla 3 MB</div><button id="uploadAvatar" style="margin-top:10px">Fotoğrafı yükle</button><div class="small" id="avatarMsg" aria-live="polite"></div></div></div></div>
- <div class="card" style="margin-top:16px"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifre sıfırlama bu kullanıcı adı tabanlı ilk sürümde etkin değildir. Hesap güvenliği için güçlü ve benzersiz bir şifre seç.</div></div>
+ <div class="card" style="margin-top:16px"><div class="title">Hesap bilgileri</div><div id="accountInfo" class="muted"></div><div class="notice">Şifrelerini kimseyle paylaşma. Şifreni değiştirmek için yöneticiyle iletişime geçebilirsin.</div></div>
+ <div class="card" id="adminUsersCard" style="display:none;margin-top:16px;border-color:#7165c7"><div class="title">Yönetici · Kullanıcı şifreleri</div><div class="muted">Kullanıcıların şifrelerini göremezsin; yalnızca yeni bir şifre belirleyebilirsin. İşlem anında uygulanır.</div><button id="loadAdminUsers" style="margin-top:12px">Kullanıcıları getir</button><div id="adminUsersMsg" class="small" aria-live="polite" style="margin-top:8px"></div><div id="adminUsersList" style="margin-top:12px"></div></div>
  <div class="card" style="margin-top:16px;border-color:#713b59"><div class="title">Hesabımı sil</div><div class="muted">Yalnızca kendi hesabını silebilirsin. Hesabın ve ilişkili çalışma verilerin kalıcı olarak silinir.</div><button class="danger" id="deleteMyAccount" style="margin-top:14px">Kendi hesabımı kalıcı olarak sil</button><div class="small" id="deleteAccountMsg" aria-live="polite"></div></div>
 </section>
 </main></div></div>
@@ -461,11 +462,44 @@ $("authSubmit").onclick=async()=>{
  }catch(e){msg(e.message||"İşlem başarısız.");}
  finally{$("authSubmit").disabled=false;}
 };
+async function adminRequest(payload){
+ const {data,error}=await sb.functions.invoke("admin-user-tools",{body:payload});
+ if(error)throw error;
+ if(data?.error)throw new Error(data.error);
+ return data;
+}
+async function loadAdminUsers(){
+ const btn=$("loadAdminUsers");btn.disabled=true;$("adminUsersMsg").textContent="Kullanıcılar yükleniyor…";
+ try{
+  const data=await adminRequest({action:"list"});
+  $("adminUsersList").innerHTML=(data.users||[]).map(u=>{
+   const label=(u.display_name||u.username||"Kullanıcı")+" · @"+u.username;
+   return '<div class="row" style="align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #343a58"><div class="grow" style="min-width:0"><strong>'+escapeHtml(label)+'</strong></div><button class="secondary adminResetBtn" data-user-id="'+escapeHtml(u.id)+'" data-username="'+escapeHtml(u.username)+'">Şifre yenile</button></div>';
+  }).join("")||'<div class="empty">Kullanıcı bulunamadı.</div>';
+  document.querySelectorAll(".adminResetBtn").forEach(b=>b.onclick=async()=>{
+   const name=b.dataset.username;
+   const first=prompt("@"+name+" için yeni şifreyi gir (en az 8 karakter):");
+   if(first===null)return;
+   if(first.length<8||first.length>72){$("adminUsersMsg").textContent="Şifre 8-72 karakter arasında olmalı.";return;}
+   const second=prompt("Yeni şifreyi tekrar gir:");
+   if(second===null)return;
+   if(first!==second){$("adminUsersMsg").textContent="Şifreler eşleşmiyor.";return;}
+   if(!confirm("@"+name+" kullanıcısının şifresi değiştirilsin mi?"))return;
+   b.disabled=true;
+   try{await adminRequest({action:"reset_password",user_id:b.dataset.userId,password:first});$("adminUsersMsg").textContent="@"+name+" kullanıcısının şifresi başarıyla yenilendi.";}
+   catch(e){$("adminUsersMsg").textContent="İşlem başarısız: "+e.message;}
+   finally{b.disabled=false;}
+  });
+  $("adminUsersMsg").textContent=(data.users||[]).length+" kullanıcı listelendi.";
+ }catch(e){$("adminUsersMsg").textContent="Kullanıcılar alınamadı: "+e.message;}
+ finally{btn.disabled=false;}
+}
+$("loadAdminUsers").onclick=loadAdminUsers;
 async function afterLogin(u){
  user=u;
  const {data,error}=await sb.from("profiles").select("*").eq("id",u.id).single();
  if(error)throw error;profile=data;
- showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;renderMyAvatar();
+ showApp();$("meLabel").textContent="@"+profile.username;$("accountInfo").textContent="Kullanıcı adı: @"+profile.username+" · Görünen ad: "+profile.display_name;$("adminUsersCard").style.display=profile.username==="tunakampta"?"block":"none";if(profile.username!=="tunakampta")$("adminUsersList").innerHTML="";renderMyAvatar();
  const savedView=localStorage.getItem("studyflow_active_view");
  const targetView=savedView&&$(savedView)?savedView:"home";
  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===targetView));
