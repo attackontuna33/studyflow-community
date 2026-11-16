@@ -77,3 +77,5 @@ end;
 $$;
 
 grant execute on function public.complete_study_plan(uuid) to authenticated;
+
+grant select, insert, delete on public.study_sessions to authenticated;
