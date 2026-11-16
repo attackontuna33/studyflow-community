@@ -80,6 +80,38 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 @media(max-width:850px){.planner-hero-mark{width:130px;flex-basis:130px}.planner-days{gap:6px}.planner-day{min-height:116px;padding:10px 6px}.planner-lower{grid-template-columns:1fr}}
 @media(max-width:620px){.planner-hero{padding:23px 18px;min-height:0}.planner-hero-mark{display:none}.planner-hero h2{font-size:28px}.planner-hero-controls{gap:6px}.planner-hero-controls button{font-size:10px;padding:8px 9px}.planner-summary{gap:7px}.planner-stat{padding:11px 8px;gap:7px;align-items:flex-start;flex-direction:column}.planner-stat-icon{width:31px;height:31px;flex-basis:31px;font-size:16px;border-radius:9px}.planner-stat strong{font-size:17px}.planner-stat em{font-size:9px}.planner-stat small{font-size:8px}.planner-week-panel,.planner-form-panel,.planner-tasks-panel{padding:14px}.planner-section-head h3{font-size:17px}.planner-days{gap:4px}.planner-day{min-height:102px;padding:8px 4px;border-radius:10px}.planner-day-name{font-size:8px;letter-spacing:0}.planner-day-number{font-size:19px;margin:8px 0}.planner-day-count,.planner-day-minutes{font-size:8px}.planner-day-dot{top:9px;right:7px;width:5px;height:5px}.planner-form-grid{grid-template-columns:1fr 1fr}}
 
+
+/* Weekly plan as an editorial timetable */
+.planner-table-wrap{width:100%;overflow-x:auto;border:1px solid #343a5b;border-radius:15px;background:#15192d}
+.planner-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.planner-table th{padding:13px 16px;text-align:left;font-size:9px;letter-spacing:1.4px;font-weight:850;color:#858eaf;background:#1c2038;border-bottom:1px solid #343a5b}
+.planner-table th:first-child{width:155px}.planner-table th:nth-child(3){width:105px}.planner-table th:nth-child(4){width:130px}
+.planner-table td{padding:13px 16px;border-bottom:1px solid #2c324e;vertical-align:middle;background:#191d33;transition:background .15s}
+.planner-table tr:last-child td{border-bottom:0}
+.planner-table tbody tr{cursor:pointer}
+.planner-table tbody tr:hover td{background:#222744}
+.planner-table tbody tr.selected td{background:linear-gradient(90deg,#393365,#252f52)}
+.planner-table tbody tr.selected td:first-child{box-shadow:inset 3px 0 #9c8cff}
+.planner-table tbody tr.today:not(.selected) td:first-child{box-shadow:inset 3px 0 #5c91d2}
+.planner-table-day{display:flex;align-items:center;gap:11px}
+.planner-table-date{width:42px;height:44px;display:grid;place-content:center;text-align:center;border-radius:11px;background:#282d49;border:1px solid #3a4264;flex:0 0 42px}
+.planner-table-date strong{font-size:17px;line-height:1.1}.planner-table-date span{font-size:8px;color:#a6adca;text-transform:uppercase;letter-spacing:.7px}
+.planner-table-day-name{font-size:12px;font-weight:750}.planner-table-day-note{font-size:10px;color:#858eaf;margin-top:3px}
+.planner-table-tasks{display:flex;flex-wrap:wrap;gap:6px}
+.planner-task-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:7px 9px;border-radius:8px;background:#292d4a;border:1px solid #3b4262;color:#dce0f6;font-size:10px;line-height:1.3}
+.planner-task-chip.done{background:#183b37;border-color:#285c52;color:#a4e7d0}
+.planner-task-chip i{width:6px;height:6px;border-radius:50%;background:#9a88ff;flex:0 0 6px}
+.planner-task-chip.done i{background:#57d5a7}
+.planner-empty-cell{font-size:11px;color:#737d9f;font-style:italic}
+.planner-table-minutes{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.planner-table-minutes small{display:block;font-size:9px;color:#7f89aa;font-weight:500;margin-top:3px}
+.planner-progress-cell{display:flex;align-items:center;gap:8px}
+.planner-progress-track{height:6px;flex:1;min-width:35px;background:#303653;border-radius:20px;overflow:hidden}
+.planner-progress-track span{height:100%;display:block;background:linear-gradient(90deg,#927df6,#5e9df4);border-radius:20px}
+.planner-progress-cell b{font-size:10px;color:#b9c1df;min-width:25px;text-align:right}
+.planner-table tr.selected .planner-table-date{background:#4b4385;border-color:#8274db}
+@media(max-width:620px){.planner-week-panel{padding:12px}.planner-table th{padding:11px 10px}.planner-table td{padding:10px}.planner-table th:first-child{width:118px}.planner-table th:nth-child(3){width:75px}.planner-table th:nth-child(4){width:95px}.planner-table-date{width:34px;height:38px;flex-basis:34px;border-radius:9px}.planner-table-day{gap:7px}.planner-table-day-name{font-size:10px}.planner-table-day-note{font-size:9px}.planner-task-chip{font-size:9px;padding:6px 7px}.planner-table-minutes{font-size:11px}.planner-progress-cell{gap:5px}}
+
 </style>
 </head>
 <body>
@@ -223,7 +255,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  </div>
  <div class="planner-week-panel">
   <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
-  <div id="plannerDays" class="planner-days"></div>
+  <div class="planner-table-wrap"><table class="planner-table"><thead><tr><th>GÜN</th><th>PLANLANAN ÇALIŞMALAR</th><th>SÜRE</th><th>DURUM</th></tr></thead><tbody id="plannerDays"></tbody></table></div>
  </div>
  <div class="planner-lower">
   <div class="planner-form-panel">
@@ -604,10 +636,11 @@ function renderPlanner(){
  $("plannedTotal").textContent=total+" dk";$("plannedDone").textContent=done+" dk";$("plannedCount").textContent=completedCount+"/"+plannerRows.length;
  const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
  $("plannerDays").innerHTML=names.map((name,i)=>{
-  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate;
-  return '<button type="button" class="planner-day '+(active?'active ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><span class="planner-day-name">'+name+'</span><strong class="planner-day-number">'+d.getDate()+'</strong>'+(rows.length?'<i class="planner-day-dot"></i>':'')+'<span class="planner-day-count">'+rows.length+' görev</span><span class="planner-day-minutes">'+minutes+' dk</span></button>';
+  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate,done=rows.filter(p=>p.completed).length,pct=rows.length?Math.round(done/rows.length*100):0;
+  const taskHtml=rows.length?'<div class="planner-table-tasks">'+rows.slice(0,3).map(p=>'<span class="planner-task-chip '+(p.completed?'done':'')+'"><i></i>'+escapeHtml(p.subject)+(p.topic?' · '+escapeHtml(p.topic):'')+'</span>').join('')+(rows.length>3?'<span class="planner-task-chip">+'+(rows.length-3)+' görev</span>':'')+'</div>':'<span class="planner-empty-cell">Henüz plan eklenmemiş</span>';
+  return '<tr class="'+(active?'selected ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><td><div class="planner-table-day"><div class="planner-table-date"><strong>'+d.getDate()+'</strong><span>'+name+'</span></div><div><div class="planner-table-day-name">'+(key===dateKey(new Date())?'Bugün':name)+'</div><div class="planner-table-day-note">'+rows.length+' görev</div></div></div></td><td>'+taskHtml+'</td><td><div class="planner-table-minutes">'+minutes+' dk<small>'+done+' / '+rows.length+' tamamlandı</small></div></td><td><div class="planner-progress-cell"><div class="planner-progress-track"><span style="width:'+pct+'%"></span></div><b>%'+pct+'</b></div></td></tr>';
  }).join("");
- document.querySelectorAll("[data-planner-day]").forEach(b=>b.onclick=()=>{plannerSelectedDate=b.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
+ document.querySelectorAll("[data-planner-day]").forEach(row=>row.onclick=()=>{plannerSelectedDate=row.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
  const chosen=parseLocalDate(plannerSelectedDate);
  $("selectedDayTitle").textContent="Görevler · "+chosen.toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long"});
  const rows=plannerRows.filter(p=>p.plan_date===plannerSelectedDate);
