@@ -1195,7 +1195,7 @@ async function loadChatMessages(){
   const unread=(data||[]).filter(m=>m.sender_id!==user.id&&new Date(m.created_at).getTime()>new Date(chatLastSeenAt||0).getTime());
   updateChatBadge(unread.length);
   const box=$("chatMessages");
-  if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';return;}
+  if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';await loadChatPhotos();return;}
   box.innerHTML=data.map(m=>{
    const mine=m.sender_id===user.id;
    const name=m.profiles?.display_name||m.profiles?.username||"Arkadaş";
