@@ -140,6 +140,30 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .friend-row-open{cursor:pointer;border-radius:10px;padding-left:7px;padding-right:7px;margin-left:-7px;margin-right:-7px}.friend-row-open:hover{background:#252a46}
 @media(max-width:620px){.friend-profile-card{padding:15px;border-radius:16px}.friend-profile-week{font-size:10px}.friend-profile-week td{padding:8px 5px}}
 
+
+/* Hour-by-hour weekly calendar */
+.planner-timeline-wrap{width:100%;overflow-x:auto;border:1px solid #343a5b;border-radius:15px;background:#171c30}
+.planner-timeline{min-width:720px}
+.timeline-head{display:grid;grid-template-columns:58px repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:3;background:#1d2339;border-bottom:1px solid #3b4562}
+.timeline-time-head{display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:1px;color:#75809f}
+.timeline-day-head{border:0;border-left:1px solid #343d58;border-radius:0;background:transparent;color:#9da7c5;padding:10px 3px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px}
+.timeline-day-head span{font-size:10px;font-weight:700}.timeline-day-head strong{font-size:17px}
+.timeline-day-head.active{background:#e7eaff;color:#49428b}.timeline-day-head.today:not(.active){color:#b6aaff}
+.timeline-body{display:grid;grid-template-columns:58px repeat(7,minmax(0,1fr));position:relative}
+.timeline-hours{display:grid;grid-template-rows:repeat(17,84px);background:#171c30}
+.timeline-hour{font-size:10px;color:#8993b0;text-align:center;padding-top:5px;transform:translateY(-7px)}
+.timeline-day-column{position:relative;display:grid;grid-template-rows:repeat(17,84px);border-left:1px solid #2e3853;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 83px,#34405b 83px,#34405b 84px)}
+.timeline-day-column:hover{background-color:#ffffff05}
+.timeline-slot{border-bottom:1px solid #26314a;pointer-events:none}
+.timeline-event{position:absolute;left:4px;right:4px;z-index:2;overflow:hidden;text-align:left;display:flex;flex-direction:column;gap:4px;padding:7px 8px;border:1px solid #8f85ff66;border-radius:9px;background:linear-gradient(145deg,#6964ee,#5149bf);color:white;box-shadow:0 5px 14px #070b1e55;min-height:30px}
+.timeline-event:nth-of-type(2n){background:linear-gradient(145deg,#9b63ed,#7049c7);border-color:#c49aff66}
+.timeline-event.completed{background:linear-gradient(145deg,#258c78,#17695e);border-color:#6ed9ba77}
+.timeline-event strong{font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timeline-event span{font-size:9px;opacity:.9;white-space:nowrap}
+.timeline-event small{font-size:9px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timeline-event:hover{filter:brightness(1.12);z-index:4}
+@media(max-width:620px){.planner-timeline{min-width:680px}.timeline-head,.timeline-body{grid-template-columns:48px repeat(7,minmax(0,1fr))}.timeline-hours{grid-template-rows:repeat(17,72px)}.timeline-day-column{grid-template-rows:repeat(17,72px);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 71px,#34405b 71px,#34405b 72px)}.timeline-hour{font-size:9px}.timeline-event{left:2px;right:2px;padding:5px 4px}.timeline-event strong{font-size:9px}.timeline-event span,.timeline-event small{font-size:8px}}
+
 </style>
 </head>
 <body>
@@ -279,7 +303,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 
  <div class="planner-week-panel">
   <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
-  <div class="planner-table-wrap"><table class="planner-table"><thead><tr><th>GÜN</th><th>ÇALIŞMA PLANI</th><th>SÜRE</th></tr></thead><tbody id="plannerDays"></tbody></table></div>
+  <div class="planner-timeline-wrap"><div id="plannerTimeline" class="planner-timeline"></div></div>
  </div>
  <div class="planner-lower">
   <div class="planner-form-panel">
@@ -288,7 +312,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
     <div><label>Tarih</label><input id="planDate" type="date"></div>
     <div><label>Ders</label><select id="planSubject"><option value="">Ders seç</option></select></div>
     <div class="planner-full"><label>Konu <span>(isteğe bağlı)</span></label><select id="planTopic"><option value="">Konu seç (isteğe bağlı)</option></select></div>
-    <div class="planner-full"><label>Hedef süre</label><div class="planner-duration"><input id="planMinutes" type="number" min="5" max="1440" step="5" value="60"><span>dakika</span></div></div>
+    <div><label>Başlangıç saati</label><input id="planStartTime" type="time" value="09:00"></div><div><label>Hedef süre</label><div class="planner-duration"><input id="planMinutes" type="number" min="5" max="1440" step="5" value="60"><span>dakika</span></div></div>
    </div>
    <button id="addPlan" class="planner-add-button">＋ Takvime ekle</button>
    <div class="small" id="planMsg" aria-live="polite"></div>
@@ -684,25 +708,24 @@ async function loadPlanner(){
  if(!plannerWeekStart)plannerWeekStart=startOfWeek(new Date());
  if(!plannerSelectedDate)plannerSelectedDate=dateKey(new Date());
  const end=shiftDate(plannerWeekStart,6);
- const {data,error}=await sb.from("study_plans").select("id,plan_date,subject,topic,planned_minutes,completed").eq("user_id",user.id).gte("plan_date",dateKey(plannerWeekStart)).lte("plan_date",dateKey(end)).order("plan_date",{ascending:true}).order("created_at",{ascending:true});
+ const {data,error}=await sb.from("study_plans").select("id,plan_date,subject,topic,planned_minutes,completed,start_time").eq("user_id",user.id).gte("plan_date",dateKey(plannerWeekStart)).lte("plan_date",dateKey(end)).order("plan_date",{ascending:true}).order("created_at",{ascending:true});
  if(error){msg("Planlar yüklenemedi: "+error.message,"planMsg");return;}
  plannerRows=data||[];renderPlanner();
 }
 function renderPlanner(){
  $("plannerWeekLabel").textContent=plannerRangeLabel(plannerWeekStart);
- const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
- $("plannerDays").innerHTML=names.map((name,i)=>{
-  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate;
-  const taskHtml=rows.length?'<div class="planner-table-tasks">'+rows.slice(0,2).map(p=>'<span class="planner-task-chip '+(p.completed?'done':'')+'"><i></i>'+escapeHtml(p.subject)+(p.topic?' · '+escapeHtml(p.topic):'')+'</span>').join('')+(rows.length>2?'<span class="planner-task-chip">+'+(rows.length-2)+'</span>':'')+'</div>':'<span class="planner-empty-cell">—</span>';
-  return '<tr class="'+(active?'selected ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><td><div class="planner-table-day"><div class="planner-table-date"><strong>'+d.getDate()+'</strong><span>'+name+'</span></div><div class="planner-table-day-name">'+(key===dateKey(new Date())?'Bugün':name)+'</div></div></td><td>'+taskHtml+'</td><td><div class="planner-table-minutes">'+minutes+' dk</div></td></tr>';
- }).join("");
- document.querySelectorAll("[data-planner-day]").forEach(row=>row.onclick=()=>{plannerSelectedDate=row.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
+ const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"],hours=Array.from({length:17},(_,i)=>i+7);
+ const header='<div class="timeline-head"><div class="timeline-time-head">SAAT</div>'+names.map((name,i)=>{const d=shiftDate(plannerWeekStart,i),key=dateKey(d);return '<button class="timeline-day-head '+(key===plannerSelectedDate?'active ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><span>'+name+'</span><strong>'+d.getDate()+'</strong></button>';}).join("")+'</div>';
+ const grid='<div class="timeline-body"><div class="timeline-hours">'+hours.map(h=>'<div class="timeline-hour">'+String(h).padStart(2,"0")+':00</div>').join("")+'</div>'+names.map((name,i)=>{const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key);return '<div class="timeline-day-column" data-timeline-day="'+key+'">'+hours.map(()=>'<div class="timeline-slot"></div>').join("")+rows.map(p=>{const parts=String(p.start_time||"09:00").slice(0,5).split(":").map(Number),start=parts[0]*60+parts[1],duration=Number(p.planned_minutes||60),top=(start-420)/60*84,height=Math.max(34,duration/60*84-4),h=Math.floor(start/60),m=start%60;return '<button class="timeline-event '+(p.completed?'completed':'')+'" data-event-id="'+p.id+'" style="top:'+top+'px;height:'+height+'px" title="'+escapeHtml(p.subject)+' · '+String(h).padStart(2,"0")+':'+String(m).padStart(2,"0")+'"><strong>'+escapeHtml(p.subject)+'</strong><span>'+String(h).padStart(2,"0")+':'+String(m).padStart(2,"0")+' · '+duration+' dk</span><small>'+escapeHtml(p.topic||"Çalışma")+'</small></button>';}).join("")+'</div>';}).join("")+'</div>';
+ $("plannerTimeline").innerHTML=header+grid;
+ document.querySelectorAll("[data-planner-day]").forEach(el=>el.onclick=()=>{plannerSelectedDate=el.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
+ document.querySelectorAll("[data-timeline-day]").forEach(col=>col.onclick=e=>{if(e.target.closest(".timeline-event"))return;plannerSelectedDate=col.dataset.timelineDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
  const chosen=parseLocalDate(plannerSelectedDate);
  $("selectedDayTitle").textContent="Görevler · "+chosen.toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long"});
  const rows=plannerRows.filter(p=>p.plan_date===plannerSelectedDate);
- $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><div class="planner-task-subject"><i class="planner-task-dot"></i><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong></div><div class="planner-task-meta">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="planner-task-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
- document.querySelectorAll("[data-plan-toggle]").forEach(b=>b.onclick=()=>togglePlan(b.dataset.planToggle));
- document.querySelectorAll("[data-plan-delete]").forEach(b=>b.onclick=()=>deletePlan(b.dataset.planDelete));
+ $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><div class="planner-task-subject"><i class="planner-task-dot"></i><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong></div><div class="planner-task-meta">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+String(p.start_time||"09:00").slice(0,5)+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="planner-task-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
+ document.querySelectorAll("[data-plan-toggle]").forEach(btn=>btn.onclick=()=>togglePlan(btn.dataset.planToggle));
+ document.querySelectorAll("[data-plan-delete]").forEach(btn=>btn.onclick=()=>deletePlan(btn.dataset.planDelete));
 }
 function refreshPlanTopicOptions(){
  const subjectId=$("planSubject").value,topics=studyTopics.filter(t=>t.subject_id===subjectId);
@@ -725,7 +748,7 @@ $("addPlan").onclick=async()=>{
  if(!Number.isInteger(minutes)||minutes<5||minutes>1440)return msg("Süre 5 ile 1440 dakika arasında olmalı.","planMsg");
  const button=$("addPlan");button.disabled=true;
  try{
-  const {error}=await sb.from("study_plans").insert({user_id:user.id,plan_date,subject:subject.name,topic:topic?.title||null,planned_minutes:minutes});
+  const {error}=await sb.from("study_plans").insert({user_id:user.id,plan_date,subject:subject.name,topic:topic?.title||null,planned_minutes:minutes,start_time:$("planStartTime").value||"09:00"});
   if(error)throw error;
   plannerSelectedDate=plan_date;plannerWeekStart=startOfWeek(parseLocalDate(plan_date));msg("Görev takvime eklendi.","planMsg");await loadPlanner();
  }catch(e){msg("Görev eklenemedi: "+e.message,"planMsg");}
