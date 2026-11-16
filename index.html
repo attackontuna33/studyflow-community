@@ -854,22 +854,22 @@ function updateAgsCountdown(){
 }
 updateAgsCountdown();setInterval(updateAgsCountdown,1000);
 
-function paint(){ $("clock").textContent=fmt(timerSeconds);$("clock2").textContent=fmt(timerSeconds);}
+function paint(){if($("clock"))$("clock").textContent=fmt(timerSeconds);if($("clock2"))$("clock2").textContent=fmt(timerSeconds);}
 function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();}
 function startTimer(){if(timerRunning)return;timerRunning=true;timerStart=Date.now()-timerSeconds*1000;timerInterval=setInterval(tick,500);}
 function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);}
 function resetTimer(){pauseTimer();timerSeconds=0;paint();}
 async function saveTimer(){
  pauseTimer();if(timerSeconds<1)return alert("Kaydedilecek süre yok.");
- const seconds=timerSeconds, subject=$("subject").value;
+ const seconds=timerSeconds, subject="Genel çalışma";
  const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject,seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
  if(error)return alert(error.message);
- timerSeconds=0;paint();$("timerMsg").textContent="Oturum kaydedildi.";await refreshDashboard();
+ timerSeconds=0;paint();if($("timerMsg"))$("timerMsg").textContent="Oturum kaydedildi.";await refreshDashboard();
 }
-["start","start2"].forEach(id=>$(id).onclick=startTimer);
-["pause","pause2"].forEach(id=>$(id).onclick=pauseTimer);
-["reset","reset2"].forEach(id=>$(id).onclick=resetTimer);
-["saveSession","save2"].forEach(id=>$(id).onclick=saveTimer);
+["start","start2"].forEach(id=>{const el=$(id);if(el)el.onclick=startTimer;});
+["pause","pause2"].forEach(id=>{const el=$(id);if(el)el.onclick=pauseTimer;});
+["reset","reset2"].forEach(id=>{const el=$(id);if(el)el.onclick=resetTimer;});
+["saveSession","save2"].forEach(id=>{const el=$(id);if(el)el.onclick=saveTimer;});
 
 
 // Pomodoro timer: independent from the regular stopwatch
