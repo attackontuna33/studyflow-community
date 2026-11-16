@@ -408,7 +408,7 @@ let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=n
 function msg(t,el="authMsg"){ $(el).textContent=t; }
 function cleanUsername(s){return s.trim().toLowerCase();}
 function validUsername(s){return /^[a-z0-9_]{3,24}$/.test(s);}
-function syntheticEmail(username){return cleanUsername(username)+"@studyflow.example.com";}
+function syntheticEmail(username){return cleanUsername(username)+"@studyflow.app";}
 function fmt(sec){sec=Math.max(0,Math.floor(sec));return [Math.floor(sec/3600),Math.floor(sec%3600/60),sec%60].map(n=>String(n).padStart(2,"0")).join(":");}
 function today(){return new Date().toLocaleDateString("sv-SE");}
 function sinceDate(days){let d=new Date();d.setDate(d.getDate()-days);return d.toLocaleDateString("sv-SE");}
