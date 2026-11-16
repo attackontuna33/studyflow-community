@@ -112,6 +112,21 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .planner-table tr.selected .planner-table-date{background:#4b4385;border-color:#8274db}
 @media(max-width:620px){.planner-week-panel{padding:12px}.planner-table th{padding:11px 10px}.planner-table td{padding:10px}.planner-table th:first-child{width:118px}.planner-table th:nth-child(3){width:75px}.planner-table th:nth-child(4){width:95px}.planner-table-date{width:34px;height:38px;flex-basis:34px;border-radius:9px}.planner-table-day{gap:7px}.planner-table-day-name{font-size:10px}.planner-table-day-note{font-size:9px}.planner-task-chip{font-size:9px;padding:6px 7px}.planner-table-minutes{font-size:11px}.planner-progress-cell{gap:5px}}
 
+
+/* Simplified weekly planner */
+.planner-summary{display:none}
+.planner-table th:first-child{width:145px}
+.planner-table th:nth-child(3){width:90px}
+.planner-table th:nth-child(4){display:none}
+.planner-table td:nth-child(4){display:none}
+.planner-table td{padding-top:11px;padding-bottom:11px}
+.planner-table-date{width:38px;height:40px;flex-basis:38px}
+.planner-table-day{gap:9px}
+.planner-table-day-note{display:none}
+.planner-task-chip{padding:6px 8px;font-size:10px}
+.planner-table-minutes small{display:none}
+@media(max-width:620px){.planner-table th:first-child{width:105px}.planner-table th:nth-child(3){width:65px}.planner-table-date{width:32px;height:36px;flex-basis:32px}.planner-table-day{gap:6px}}
+
 </style>
 </head>
 <body>
@@ -248,14 +263,10 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
   </div>
   <div class="planner-hero-mark"><div class="planner-orbit orbit-one"></div><div class="planner-orbit orbit-two"></div><div class="planner-hero-symbol">✦</div><span>PLANLA · ODAKLAN · TAMAMLA</span></div>
  </div>
- <div class="planner-summary">
-  <div class="planner-stat"><span class="planner-stat-icon">◷</span><div><small>HAFTALIK HEDEF</small><strong id="plannedTotal">0 dk</strong><em>Planlanan çalışma</em></div></div>
-  <div class="planner-stat"><span class="planner-stat-icon">✓</span><div><small>TAMAMLANAN</small><strong id="plannedDone">0 dk</strong><em>Bitirdiğin çalışma</em></div></div>
-  <div class="planner-stat"><span class="planner-stat-icon">▦</span><div><small>GÖREVLER</small><strong id="plannedCount">0/0</strong><em>Tamamlanan görev</em></div></div>
- </div>
+
  <div class="planner-week-panel">
   <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
-  <div class="planner-table-wrap"><table class="planner-table"><thead><tr><th>GÜN</th><th>PLANLANAN ÇALIŞMALAR</th><th>SÜRE</th><th>DURUM</th></tr></thead><tbody id="plannerDays"></tbody></table></div>
+  <div class="planner-table-wrap"><table class="planner-table"><thead><tr><th>GÜN</th><th>ÇALIŞMA PLANI</th><th>SÜRE</th></tr></thead><tbody id="plannerDays"></tbody></table></div>
  </div>
  <div class="planner-lower">
   <div class="planner-form-panel">
@@ -630,15 +641,11 @@ async function loadPlanner(){
 }
 function renderPlanner(){
  $("plannerWeekLabel").textContent=plannerRangeLabel(plannerWeekStart);
- const total=plannerRows.reduce((a,p)=>a+Number(p.planned_minutes||0),0);
- const done=plannerRows.filter(p=>p.completed).reduce((a,p)=>a+Number(p.planned_minutes||0),0);
- const completedCount=plannerRows.filter(p=>p.completed).length;
- $("plannedTotal").textContent=total+" dk";$("plannedDone").textContent=done+" dk";$("plannedCount").textContent=completedCount+"/"+plannerRows.length;
  const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
  $("plannerDays").innerHTML=names.map((name,i)=>{
-  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate,done=rows.filter(p=>p.completed).length,pct=rows.length?Math.round(done/rows.length*100):0;
-  const taskHtml=rows.length?'<div class="planner-table-tasks">'+rows.slice(0,3).map(p=>'<span class="planner-task-chip '+(p.completed?'done':'')+'"><i></i>'+escapeHtml(p.subject)+(p.topic?' · '+escapeHtml(p.topic):'')+'</span>').join('')+(rows.length>3?'<span class="planner-task-chip">+'+(rows.length-3)+' görev</span>':'')+'</div>':'<span class="planner-empty-cell">Henüz plan eklenmemiş</span>';
-  return '<tr class="'+(active?'selected ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><td><div class="planner-table-day"><div class="planner-table-date"><strong>'+d.getDate()+'</strong><span>'+name+'</span></div><div><div class="planner-table-day-name">'+(key===dateKey(new Date())?'Bugün':name)+'</div><div class="planner-table-day-note">'+rows.length+' görev</div></div></div></td><td>'+taskHtml+'</td><td><div class="planner-table-minutes">'+minutes+' dk<small>'+done+' / '+rows.length+' tamamlandı</small></div></td><td><div class="planner-progress-cell"><div class="planner-progress-track"><span style="width:'+pct+'%"></span></div><b>%'+pct+'</b></div></td></tr>';
+  const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate;
+  const taskHtml=rows.length?'<div class="planner-table-tasks">'+rows.slice(0,2).map(p=>'<span class="planner-task-chip '+(p.completed?'done':'')+'"><i></i>'+escapeHtml(p.subject)+(p.topic?' · '+escapeHtml(p.topic):'')+'</span>').join('')+(rows.length>2?'<span class="planner-task-chip">+'+(rows.length-2)+'</span>':'')+'</div>':'<span class="planner-empty-cell">—</span>';
+  return '<tr class="'+(active?'selected ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><td><div class="planner-table-day"><div class="planner-table-date"><strong>'+d.getDate()+'</strong><span>'+name+'</span></div><div class="planner-table-day-name">'+(key===dateKey(new Date())?'Bugün':name)+'</div></div></td><td>'+taskHtml+'</td><td><div class="planner-table-minutes">'+minutes+' dk</div></td></tr>';
  }).join("");
  document.querySelectorAll("[data-planner-day]").forEach(row=>row.onclick=()=>{plannerSelectedDate=row.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
  const chosen=parseLocalDate(plannerSelectedDate);
