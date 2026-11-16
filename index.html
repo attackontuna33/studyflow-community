@@ -245,15 +245,19 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
   <div class="achievement-head"><div><div class="kicker">İLERLEMENİ KUTLA</div><div class="title">Başarıların</div><div class="small">Çalıştıkça yeni rozetler kazanırsın. Her rozet otomatik açılır.</div></div><div class="achievement-count" id="achievementCount">0 / 6</div></div>
   <div class="achievement-grid" id="achievementGrid"><div class="empty">Başarıların yükleniyor…</div></div>
  </div>
- <div class="grid layout">
-  <div class="card"><div class="title">⏱ Odak kronometresi</div><div class="timer">
-   <select id="subject"><option>AGS</option><option>ÖABT</option><option>Genel tekrar</option></select>
-   <div class="clock" id="clock">00:00:00</div>
-   <div class="actions"><button id="start">Başlat</button><button class="secondary" id="pause">Duraklat</button><button class="secondary" id="reset">Sıfırla</button><button id="saveSession">Kaydet</button></div>
-   <div class="small" id="timerMsg">En az 30 dakika, günlük serine 1 gün ekler.</div>
-  </div></div>
-  <div class="card"><div class="title">Arkadaşların</div><div id="homeFriends" class="empty">Arkadaşların burada görünecek.</div></div>
+ <div class="planner-hero">
+  <div class="planner-hero-copy"><span class="planner-eyebrow">STUDYFLOW / PLANLAYICI</span><h2>Her gün biraz daha ileri.</h2><p>Hedeflerini küçük parçalara böl, haftanı planla ve ilerlemeni gör.</p>
+   <div class="planner-hero-controls"><button class="secondary" id="plannerPrev">← Önceki hafta</button><button id="plannerToday">Bugüne dön</button><button class="secondary" id="plannerNext">Sonraki hafta →</button></div>
+  </div>
+  <div class="planner-hero-mark"><div class="planner-orbit orbit-one"></div><div class="planner-orbit orbit-two"></div><div class="planner-hero-symbol">✦</div><span>PLANLA · ODAKLAN · TAMAMLA</span></div>
  </div>
+
+ <div class="planner-week-panel">
+  <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
+  <div class="planner-timeline-wrap"><div id="plannerTimeline" class="planner-timeline"></div></div>
+ </div>
+
+ <div class="card" style="margin-top:16px"><div class="card"><div class="title">Arkadaşların</div><div id="homeFriends" class="empty">Arkadaşların burada görünecek.</div></div></div>>
  <div class="card" style="margin-top:16px"><div class="title">Son çalışma kayıtlarım</div><div id="myRecent" class="empty">Henüz kayıt yok.</div></div>
 </section>
 
@@ -348,17 +352,6 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="planner">
- <div class="planner-hero">
-  <div class="planner-hero-copy"><span class="planner-eyebrow">STUDYFLOW / PLANLAYICI</span><h2>Her gün biraz daha ileri.</h2><p>Hedeflerini küçük parçalara böl, haftanı planla ve ilerlemeni gör.</p>
-   <div class="planner-hero-controls"><button class="secondary" id="plannerPrev">← Önceki hafta</button><button id="plannerToday">Bugüne dön</button><button class="secondary" id="plannerNext">Sonraki hafta →</button></div>
-  </div>
-  <div class="planner-hero-mark"><div class="planner-orbit orbit-one"></div><div class="planner-orbit orbit-two"></div><div class="planner-hero-symbol">✦</div><span>PLANLA · ODAKLAN · TAMAMLA</span></div>
- </div>
-
- <div class="planner-week-panel">
-  <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
-  <div class="planner-timeline-wrap"><div id="plannerTimeline" class="planner-timeline"></div></div>
- </div>
  <div class="planner-lower">
   <div class="planner-form-panel">
    <div class="planner-section-head"><div><span class="planner-overline">YENİ HEDEF</span><h3>Çalışma ekle</h3></div><span class="planner-plus">＋</span></div>
@@ -454,7 +447,7 @@ async function afterLogin(u){
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===targetView));
  const activeButton=document.querySelector('.nav button[data-view="'+targetView+'"]');
  if(activeButton)$("pageTitle").textContent=activeButton.textContent.trim();
- await loadFriends();await refreshDashboard();await loadCourses();if(targetView==="planner"){refreshPlanSubjectOptions();await loadPlanner();}startPresence();await loadChatMessages();setConnection(true);
+ await loadFriends();await refreshDashboard();await loadCourses();if(targetView==="planner"||targetView==="home"){refreshPlanSubjectOptions();await loadPlanner();}startPresence();await loadChatMessages();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
 $("deleteMyAccount").onclick=async()=>{
@@ -1013,7 +1006,7 @@ document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
  localStorage.setItem("studyflow_active_view",b.dataset.view);
  $("pageTitle").textContent=b.textContent.trim();
  if(b.dataset.view==="courses")loadCourses().catch(e=>alert(e.message));
- if(b.dataset.view==="planner"){refreshPlanSubjectOptions();loadPlanner().catch(e=>msg(e.message,"planMsg"));}
+ if(b.dataset.view==="planner"||b.dataset.view==="home"){refreshPlanSubjectOptions();loadPlanner().catch(e=>msg(e.message,"planMsg"));}
  if(b.dataset.view==="chat"){
   loadChatMessages().catch(e=>msg("Mesajlar alınamadı: "+e.message,"chatMsg"));
  }
