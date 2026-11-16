@@ -178,6 +178,22 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .achievement-item.unlocked small{color:#b9b4e8}
 @media(max-width:620px){.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.achievement-item{padding:9px;gap:7px}.achievement-icon{width:32px;height:32px;flex-basis:32px;font-size:16px}.achievement-item strong{font-size:10px}.achievement-item small{font-size:8px}}
 
+
+/* Pomodoro focus workspace */
+.pomodoro-shell{max-width:850px;margin:0 auto}
+.pomodoro-heading{text-align:center;margin:8px 0 22px}.pomodoro-heading h2{font-size:30px;margin:8px 0}.pomodoro-heading p{font-size:13px;color:#9ba4c2;margin:0}
+.pomodoro-card{max-width:560px;margin:0 auto;padding:24px;border-radius:22px;border:1px solid #41466c;background:radial-gradient(circle at 50% 36%,#34345f 0,#20243e 48%,#191d33 100%);box-shadow:0 20px 55px #080b1d66;text-align:center}
+.pomodoro-modes{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}.pomodoro-modes button{padding:9px 15px;border-radius:10px;background:#292e4b;color:#aeb6d2;font-size:11px}.pomodoro-modes button.active{background:#51478e;color:#fff;box-shadow:0 4px 14px #090d2d66}
+.pomodoro-ring{width:min(290px,72vw);aspect-ratio:1;margin:25px auto 22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;border:9px solid #393d63;outline:1px solid #8176d866;box-shadow:inset 0 0 35px #090d2d55,0 0 35px #080b1d55;position:relative}
+.pomodoro-ring:before{content:"";position:absolute;inset:-9px;border-radius:50%;border:9px solid transparent;border-top-color:#9b88ff;border-right-color:#6c83f4;transform:rotate(-35deg)}
+.pomodoro-time{font-size:clamp(48px,9vw,68px);font-weight:800;letter-spacing:-2px;font-variant-numeric:tabular-nums}.pomodoro-status{font-size:10px;letter-spacing:2px;color:#b8b1f2;font-weight:800;margin-top:4px}
+.pomodoro-controls{display:flex;justify-content:center;gap:9px}.pomodoro-controls button{min-width:105px;padding:11px 18px}
+.pomodoro-session{margin-top:19px;color:#929bb9;font-size:11px}.pomodoro-session strong{color:#e4e5f5;margin-left:5px}
+.pomodoro-settings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px;padding:17px;border:1px solid #343a59;border-radius:15px;background:#191d33}
+.pomodoro-settings label{font-size:10px;color:#9ca5c3}.pomo-setting-input{display:flex;align-items:center;gap:5px}.pomo-setting-input input{min-width:0;width:100%;padding:9px 7px;text-align:center;font-weight:700}.pomo-setting-input span{font-size:10px;color:#8790ae}
+.pomodoro-note{text-align:center;color:#7882a3;font-size:10px;margin-top:13px;line-height:1.5}
+@media(max-width:620px){.pomodoro-card{padding:18px 12px}.pomodoro-settings{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pomodoro-controls button{min-width:0;flex:1;padding:11px 8px}.pomodoro-modes button{padding:8px 10px}}
+
 </style>
 </head>
 <body>
@@ -201,6 +217,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 <button data-view="chat">☰ Genel Sohbet</button>
 <button data-view="ranking">♛ Sıralama</button>
 <button data-view="timerView">◷ Kronometre</button>
+<button data-view="pomodoro">◉ Pomodoro</button>
 <button data-view="courses">▤ Derslerim</button>
 <button data-view="planner">▦ Çalışma Planı</button>
 <button data-view="account">⚙ Hesap</button>
@@ -270,6 +287,25 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 
 <section class="view" id="timerView">
  <div class="card"><div class="title">Çalışma oturumu</div><p class="muted">Kronometreyi başlat, bitirdiğinde kaydet. Kaydedilen süre istatistiklerine eklenir.</p><div class="timer"><div class="clock" id="clock2">00:00:00</div><div class="actions"><button id="start2">Başlat</button><button class="secondary" id="pause2">Duraklat</button><button class="secondary" id="reset2">Sıfırla</button><button id="save2">Kaydet</button></div></div></div>
+</section>
+
+<section class="view" id="pomodoro">
+ <div class="pomodoro-shell">
+  <div class="pomodoro-heading"><span class="planner-overline">STUDYFLOW / ODAK MODU</span><h2>Pomodoro</h2><p>Bir işe odaklan, kısa molalarla enerjini koru.</p></div>
+  <div class="pomodoro-card">
+   <div class="pomodoro-modes"><button class="active" data-pomo-mode="focus">Odak</button><button data-pomo-mode="short">Kısa mola</button><button data-pomo-mode="long">Uzun mola</button></div>
+   <div class="pomodoro-ring" id="pomoRing"><div class="pomodoro-time" id="pomoClock">25:00</div><div class="pomodoro-status" id="pomoStatus">ODAKLANMA ZAMANI</div></div>
+   <div class="pomodoro-controls"><button id="pomoStart">Başlat</button><button class="secondary" id="pomoReset">Sıfırla</button><button class="secondary" id="pomoSkip">Atla</button></div>
+   <div class="pomodoro-session">Tamamlanan odak oturumu <strong id="pomoCount">0</strong></div>
+  </div>
+  <div class="pomodoro-settings">
+   <div><label>Odak süresi</label><div class="pomo-setting-input"><input id="pomoFocusMinutes" type="number" min="5" max="90" value="25"><span>dk</span></div></div>
+   <div><label>Kısa mola</label><div class="pomo-setting-input"><input id="pomoShortMinutes" type="number" min="1" max="30" value="5"><span>dk</span></div></div>
+   <div><label>Uzun mola</label><div class="pomo-setting-input"><input id="pomoLongMinutes" type="number" min="5" max="60" value="15"><span>dk</span></div></div>
+   <div><label>Uzun mola aralığı</label><div class="pomo-setting-input"><input id="pomoCycleCount" type="number" min="2" max="8" value="4"><span>oturum</span></div></div>
+  </div>
+  <div class="pomodoro-note">Odak oturumu tamamlandığında çalışma süresi otomatik olarak istatistiklerine kaydedilir. Yarım kalan oturumlar kaydedilmez.</div>
+ </div>
 </section>
 
 <section class="view" id="courses">
@@ -840,6 +876,51 @@ async function saveTimer(){
 ["reset","reset2"].forEach(id=>$(id).onclick=resetTimer);
 ["saveSession","save2"].forEach(id=>$(id).onclick=saveTimer);
 
+
+// Pomodoro timer: independent from the regular stopwatch
+let pomoMode="focus",pomoSeconds=25*60,pomoInterval=null,pomoRunning=false,pomoCompleted=0,pomoEndAt=0;
+function pomoDuration(mode){const ids={focus:"pomoFocusMinutes",short:"pomoShortMinutes",long:"pomoLongMinutes"};return Math.max(1,Number($(ids[mode]).value)||({focus:25,short:5,long:15}[mode]))*60;}
+function pomoPaint(){
+ const m=Math.floor(pomoSeconds/60),sec=pomoSeconds%60;
+ $("pomoClock").textContent=String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+ $("pomoCount").textContent=pomoCompleted;
+ $("pomoStatus").textContent=pomoMode==="focus"?"ODAKLANMA ZAMANI":pomoMode==="short"?"KISA MOLA":"UZUN MOLA";
+ $("pomoRing").style.setProperty("--pomo-progress",String(pomoSeconds/pomoDuration(pomoMode)));
+}
+function pomoSetMode(mode){
+ pomoPause();pomoMode=mode;pomoSeconds=pomoDuration(mode);
+ document.querySelectorAll("[data-pomo-mode]").forEach(b=>b.classList.toggle("active",b.dataset.pomoMode===mode));
+ pomoPaint();
+}
+function pomoPause(){pomoRunning=false;clearInterval(pomoInterval);pomoInterval=null;$("pomoStart").textContent="Başlat";}
+function pomoStart(){
+ if(pomoRunning)return;
+ pomoRunning=true;pomoEndAt=Date.now()+pomoSeconds*1000;$("pomoStart").textContent="Duraklat";
+ pomoInterval=setInterval(pomoTick,250);
+}
+async function pomoComplete(){
+ const finishedMode=pomoMode;pomoPause();pomoSeconds=0;pomoPaint();
+ if(finishedMode==="focus"){
+  pomoCompleted++;
+  const seconds=pomoDuration("focus");
+  const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject:$("subject").value,seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
+  if(error)alert("Oturum tamamlandı ancak kaydedilemedi: "+error.message);
+  else await refreshDashboard();
+  const cycle=Math.max(2,Math.min(8,Number($("pomoCycleCount").value)||4));
+  pomoSetMode(pomoCompleted%cycle===0?"long":"short");
+ }else pomoSetMode("focus");
+}
+function pomoTick(){
+ pomoSeconds=Math.max(0,Math.ceil((pomoEndAt-Date.now())/1000));pomoPaint();
+ if(pomoSeconds<=0)pomoComplete();
+}
+$("pomoStart").onclick=()=>{if(pomoRunning){pomoSeconds=Math.max(0,Math.ceil((pomoEndAt-Date.now())/1000));pomoPause();pomoPaint();}else pomoStart();};
+$("pomoReset").onclick=()=>{pomoPause();pomoSeconds=pomoDuration(pomoMode);pomoPaint();};
+$("pomoSkip").onclick=()=>pomoSetMode(pomoMode==="focus"?"short":"focus");
+document.querySelectorAll("[data-pomo-mode]").forEach(b=>b.onclick=()=>pomoSetMode(b.dataset.pomoMode));
+["pomoFocusMinutes","pomoShortMinutes","pomoLongMinutes"].forEach(id=>$(id).onchange=()=>{if(!pomoRunning){pomoSeconds=pomoDuration(pomoMode);pomoPaint();}});
+$("pomoCycleCount").onchange=()=>{const el=$("pomoCycleCount");el.value=Math.max(2,Math.min(8,Number(el.value)||4));};
+pomoPaint();
 
 async function loadChatMessages(){
  if(!user||chatLoadInFlight)return;
