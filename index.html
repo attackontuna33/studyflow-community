@@ -4,7 +4,8 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>STUDYFLOW Community</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabase-config.js?v=20261116-2"></script>
+<script>window.STUDYFLOW_SUPABASE_URL = "https://fegitfmwvycokzidtvtp.supabase.co";
+window.STUDYFLOW_SUPABASE_ANON_KEY = "sb_publishable_W6yW9zfEQTzVolp4PEtlLQ_CRv7CdtC";</script>
 <style>
 :root{--bg:#0e1020;--panel:#191c32;--panel2:#222744;--purple:#8b75f5;--blue:#547cf6;--text:#f2f1ff;--muted:#9ba1c2;--line:#303653;--green:#43d6a0;--orange:#ffb45f}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
@@ -25,10 +26,6 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 .chat-toast{position:fixed;z-index:9999;top:18px;right:18px;width:min(350px,calc(100vw - 36px));padding:13px 15px;border:1px solid #ef4444;border-left:5px solid #dc2626;border-radius:12px;background:#3b1118;color:#fff;box-shadow:0 12px 35px #0009;display:none;cursor:pointer}
 .chat-toast strong{display:block;color:#fecaca;font-size:13px;margin-bottom:4px}
 .chat-toast span{display:block;font-size:13px;overflow-wrap:anywhere;color:#fff}
-.oneview-card{display:flex;align-items:center;gap:12px;margin:10px 0;padding:12px;border:1px solid #7f1d1d;border-radius:13px;background:linear-gradient(110deg,#32151d,#211725);color:#fff}
-.oneview-icon{width:42px;height:42px;flex-shrink:0;border-radius:11px;background:#991b1b;display:grid;place-items:center;font-size:21px}
-.oneview-card button{margin-left:auto;background:#b91c1c;border-color:#ef4444;white-space:nowrap}
-.oneview-card .small{color:#fecaca}
 #oneViewModal{display:none;position:fixed;inset:0;z-index:10000;background:#080910f2;align-items:center;justify-content:center;padding:18px}
 #oneViewModal img{max-width:100%;max-height:78vh;object-fit:contain;border-radius:12px}
 #oneViewModal .oneview-modal-inner{width:min(900px,100%);text-align:center}
@@ -1128,30 +1125,14 @@ async function mediaAuthHeaders(){
  return {Authorization:"Bearer "+data.session.access_token, apikey:SUPABASE_ANON_KEY};
 }
 async function loadChatPhotos(){
- if(!user)return;
+ if(!user)return [];
  try{
   const headers=await mediaAuthHeaders();
   const response=await fetch(MEDIA_FN_URL+"/list",{headers});
   const payload=await response.json();
   if(!response.ok)throw new Error(payload.error||"Fotoğraflar alınamadı.");
-  const box=$("chatMessages");
-  const old=box.querySelectorAll(".oneview-card");old.forEach(x=>x.remove());
-  (payload.photos||[]).forEach(photo=>{
-   const sent=photo.sender_id===user.id;
-   const card=document.createElement("div");card.className="oneview-card";
-   const icon=document.createElement("div");icon.className="oneview-icon";icon.textContent="1";
-   const info=document.createElement("div");info.style.minWidth="0";info.style.flex="1";
-   const title=document.createElement("strong");title.textContent="Tek görüntülemelik fotoğraf";
-   const detail=document.createElement("div");detail.className="small";
-   detail.textContent=sent?("Gönderildi · "+Number(photo.viewed_count||0)+"/"+Number(photo.total_recipients||0)+" kişi görüntüledi"):(photo.viewed_at?"Bu fotoğrafı görüntüledin":"Sana gönderildi · 24 saat içinde aç");
-   info.append(title,detail);card.append(icon,info);
-   if(!sent&&!photo.viewed_at){
-    const button=document.createElement("button");button.type="button";button.textContent="Fotoğrafı aç";
-    button.onclick=()=>openOneViewPhoto(photo.id,button);card.append(button);
-   }else if(!sent){const badge=document.createElement("span");badge.className="pill";badge.textContent="Açıldı";card.append(badge);}
-   box.append(card);
-  });
- }catch(e){console.warn("Tek görüntülemelik fotoğraflar:",e);}
+  return payload.photos||[];
+ }catch(e){console.warn("Tek görüntülemelik fotoğraflar:",e);return [];}
 }
 async function openOneViewPhoto(id,button){
  
@@ -1194,15 +1175,50 @@ async function loadChatMessages(){
   if(error)throw error;
   const unread=(data||[]).filter(m=>m.sender_id!==user.id&&new Date(m.created_at).getTime()>new Date(chatLastSeenAt||0).getTime());
   updateChatBadge(unread.length);
+  const photos=await loadChatPhotos();
+  const senderIds=[...new Set(photos.map(p=>p.sender_id).filter(id=>id!==user.id))];
+  let senderProfiles={};
+  if(senderIds.length){
+   const {data:people}=await sb.from("profiles").select("id,username,display_name").in("id",senderIds);
+   (people||[]).forEach(p=>senderProfiles[p.id]=p.display_name||p.username||"Arkadaş");
+  }
+  const events=[
+   ...(data||[]).map(m=>({...m,type:"message"})),
+   ...photos.map(p=>({...p,type:"photo"}))
+  ].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const box=$("chatMessages");
-  if(!data?.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';await loadChatPhotos();return;}
-  box.innerHTML=data.map(m=>{
-   const mine=m.sender_id===user.id;
-   const name=m.profiles?.display_name||m.profiles?.username||"Arkadaş";
-   const time=new Date(m.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
-   return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:9px 0"><div style="max-width:85%;padding:10px 12px;border-radius:12px;background:'+(mine?'#373064':'#222744')+'"><div class="small" style="margin:0 0 5px;color:#c4c9ee">'+escapeHtml(name)+' · '+time+'</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+escapeHtml(m.body)+'</div></div></div>';
-  }).join("");
-  await loadChatPhotos();
+  if(!events.length){box.innerHTML='<div class="empty">Son 24 saatte henüz mesaj yok. İlk mesajı sen gönder.</div>';return;}
+  box.innerHTML="";
+  events.forEach(item=>{
+   const mine=item.sender_id===user.id;
+   const time=new Date(item.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+   const name=mine?(profile?.display_name||profile?.username||"Sen"):(item.profiles?.display_name||item.profiles?.username||senderProfiles[item.sender_id]||"Arkadaş");
+   const row=document.createElement("div");
+   row.style.cssText="display:flex;justify-content:"+(mine?"flex-end":"flex-start")+";margin:8px 0";
+   const bubble=document.createElement("div");
+   bubble.style.cssText="max-width:min(78%,360px);min-width:150px;padding:9px 11px;border-radius:13px;background:"+(mine?"#373064":"#222744")+";overflow-wrap:anywhere";
+   const meta=document.createElement("div");meta.className="small";meta.style.cssText="font-size:11px;color:#c4c9ee;margin-bottom:4px";meta.textContent=name+" · "+time;
+   bubble.append(meta);
+   if(item.type==="message"){
+    const body=document.createElement("div");body.style.cssText="white-space:pre-wrap;overflow-wrap:anywhere";body.textContent=item.body;bubble.append(body);
+   }else{
+    const photoLine=document.createElement("div");photoLine.style.cssText="display:flex;align-items:center;gap:8px";
+    const symbol=document.createElement("span");symbol.textContent="▧";symbol.style.cssText="font-size:24px;color:#c4c9ee";
+    const desc=document.createElement("div");desc.style.cssText="min-width:0;flex:1";
+    const heading=document.createElement("strong");heading.style.fontSize="12px";heading.textContent="Fotoğraf";
+    const detail=document.createElement("div");detail.className="small";detail.style.fontSize="11px";
+    detail.textContent=mine?("Görüntüleme: "+Number(item.viewed_count||0)+"/"+Number(item.total_recipients||0)):(item.viewed_at?"Görüntülendi":"Tek görüntüleme · 24 saat");
+    desc.append(heading,detail);photoLine.append(symbol,desc);
+    if(!mine&&!item.viewed_at){
+     const open=document.createElement("button");open.type="button";open.textContent="Aç";open.style.cssText="padding:6px 10px;font-size:12px;background:#8b75f5";
+     open.onclick=()=>openOneViewPhoto(item.id,open);photoLine.append(open);
+    }else if(!mine){
+     const used=document.createElement("span");used.className="small";used.textContent="Açıldı";photoLine.append(used);
+    }
+    bubble.append(photoLine);
+   }
+   row.append(bubble);box.append(row);
+  });
   box.scrollTop=box.scrollHeight;
  } finally {
   chatLoadInFlight=false;
