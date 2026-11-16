@@ -274,7 +274,7 @@ async function afterLogin(u){
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===targetView));
  const activeButton=document.querySelector('.nav button[data-view="'+targetView+'"]');
  if(activeButton)$("pageTitle").textContent=activeButton.textContent.trim();
- await loadFriends();await refreshDashboard();await loadCourses();startPresence();await loadChatMessages();setConnection(true);
+ await loadFriends();await refreshDashboard();await loadCourses();if(targetView==="planner"){refreshPlanSubjectOptions();await loadPlanner();}startPresence();await loadChatMessages();setConnection(true);
 }
 $("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
 $("deleteMyAccount").onclick=async()=>{
