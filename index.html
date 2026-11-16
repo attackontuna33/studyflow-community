@@ -580,7 +580,17 @@ async function heartbeat(){
  if(error)setConnection(false);else setConnection(true);
 }
 async function startPresence(){
- await heartbeat();presenceInterval=setInterval(heartbeat,30000);
+ // Sohbet yenilemesini heartbeat isteğini beklemeden başlat.
+ if(presenceInterval)clearInterval(presenceInterval);
+ if(chatRefreshInterval)clearInterval(chatRefreshInterval);
+ chatRefreshInterval=setInterval(()=>{
+  if(user && !chatLoadInFlight)loadChatMessages().catch(e=>{
+   console.warn("Sohbet yenileme:",e);
+   if($("chat").classList.contains("active"))msg("Mesajlar yenilenemedi: "+e.message,"chatMsg");
+  });
+ },2000);
+ heartbeat().catch(e=>console.warn("Presence heartbeat:",e));
+ presenceInterval=setInterval(()=>heartbeat().catch(e=>console.warn("Presence heartbeat:",e)),30000);
  if(friendsRefreshInterval)clearInterval(friendsRefreshInterval);
  // Realtime bağlantısı kesilirse çevrimiçi durumu için yedek kontrol.
  friendsRefreshInterval=setInterval(()=>{if(user)loadFriends().catch(()=>{});},5000);
@@ -588,10 +598,14 @@ async function startPresence(){
  presenceChannel=sb.channel("studyflow-friend-presence").on("postgres_changes",{event:"*",schema:"public",table:"user_presence"},()=>{if(user)loadFriends().catch(()=>{});}).subscribe();
  if(chatChannel)sb.removeChannel(chatChannel);
  chatChannel=sb.channel("studyflow-chat")
-  .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user && $("chat").classList.contains("active"))loadChatMessages().catch(e=>msg(e.message,"chatMsg"));})
-  .subscribe((status)=>{if(status==="SUBSCRIBED"){if($("chat").classList.contains("active"))msg("Canlı sohbet bağlantısı kuruldu.","chatMsg");}else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){if($("chat").classList.contains("active"))msg("Canlı bağlantı kurulamadı. Mesajlar 1,5 saniyede bir kontrol ediliyor.","chatMsg");}});
- if(chatRefreshInterval)clearInterval(chatRefreshInterval);
- chatRefreshInterval=setInterval(()=>{if(user)loadChatMessages().catch(e=>{console.warn("Sohbet yenileme:",e);if($("chat").classList.contains("active"))msg("Mesajlar yenilenemedi: "+e.message,"chatMsg");});},1500);
+  .on("postgres_changes",{event:"INSERT",schema:"public",table:"chat_messages"},()=>{if(user)loadChatMessages().catch(e=>{console.warn("Canlı sohbet olayı:",e);});})
+  .subscribe((status)=>{
+   if(status==="SUBSCRIBED"){
+    if($("chat").classList.contains("active"))msg("Canlı sohbet bağlantısı kuruldu.","chatMsg");
+   }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
+    if($("chat").classList.contains("active"))msg("Canlı bağlantı kesildi; otomatik mesaj kontrolü devam ediyor.","chatMsg");
+   }
+  });
  if(dataChannel)sb.removeChannel(dataChannel);
  dataChannel=sb.channel("studyflow-live-data")
   .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},()=>{if(user)loadFriends().catch(()=>{});})
