@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>STUDYFLOW Community</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabase-config.js"></script>
+<script src="./supabase-config.js?v=20261116-2"></script>
 <style>
 :root{--bg:#0e1020;--panel:#191c32;--panel2:#222744;--purple:#8b75f5;--blue:#547cf6;--text:#f2f1ff;--muted:#9ba1c2;--line:#303653;--green:#43d6a0;--orange:#ffb45f}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
@@ -453,7 +453,7 @@ function showApp(){ $("authScreen").style.display="none";$("app").style.display=
 function switchAuth(){signUpMode=!signUpMode;$("authTitle").textContent=signUpMode?"Yeni hesap oluştur":"Hesabına giriş yap";$("authSub").textContent=signUpMode?"StudyFlow topluluğuna katıl.":"Arkadaşlarınla birlikte ilerle.";$("signupNameWrap").style.display=signUpMode?"block":"none";$("authSubmit").textContent=signUpMode?"Kayıt ol":"Giriş yap";$("authSwitch").textContent=signUpMode?"Zaten hesabın var mı? Giriş yap":"Hesabın yok mu? Kayıt ol";msg("");}
 $("authSwitch").onclick=switchAuth;
 $("authSubmit").onclick=async()=>{
- if(!configured){msg("Önce index.html içindeki Supabase URL ve anon key alanlarını doldur.");return;}
+ if(!configured){msg("Supabase bağlantısı yüklenemedi. Sayfayı yenileyip tekrar dene.");return;}
  const username=cleanUsername($("username").value), password=$("password").value;
  if(!validUsername(username)){msg("Kullanıcı adı 3–24 karakter olmalı; yalnızca a-z, 0-9 ve _ kullan.");return;}
  if(password.length<8){msg("Şifre en az 8 karakter olmalı.");return;}
