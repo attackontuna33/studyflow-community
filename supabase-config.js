@@ -6,4 +6,3 @@ window.STUDYFLOW_SUPABASE_URL =
 
 window.STUDYFLOW_SUPABASE_ANON_KEY =
 "sb_publishable_W6yW9zfEQTzVolp4PEtlLQ_CRv7CdtC";
-\n// Tek görüntülemelik sohbet fotoğrafları Supabase Storage üzerinden çalışır.\n
