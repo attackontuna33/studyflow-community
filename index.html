@@ -430,9 +430,14 @@ $("authSubmit").onclick=async()=>{
    if(!data.session){msg("Kayıt oluşturuldu. Supabase Auth ayarlarında email confirmation kapalı olmalı; sonra giriş yap.");}
    else await afterLogin(data.user);
   }else{
-   const {data,error}=await sb.auth.signInWithPassword({email:syntheticEmail(username),password});
-   if(error)throw error;
-   await afterLogin(data.user);
+   let result=await sb.auth.signInWithPassword({email:syntheticEmail(username),password});
+   if(result.error && /invalid login credentials|email not confirmed/i.test(result.error.message||"")){
+    const legacyEmail=username+"@studyflow.example.com";
+    const legacy=await sb.auth.signInWithPassword({email:legacyEmail,password});
+    if(!legacy.error)result=legacy;
+   }
+   if(result.error)throw result.error;
+   await afterLogin(result.data.user);
   }
  }catch(e){msg(e.message||"İşlem başarısız.");}
  finally{$("authSubmit").disabled=false;}
