@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studyflow-chat-media",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-16",
+  "r2_buckets": [
+    { "binding": "PHOTOS", "bucket_name": "studyflow-one-view-photos" }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "studyflow-chat-media", "database_id": "REPLACE_WITH_D1_DATABASE_ID" }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://fegitfmwvycokzidtvtp.supabase.co"
+  },
+  "triggers": { "crons": ["*/15 * * * *"] }
+}
