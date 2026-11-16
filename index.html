@@ -253,8 +253,8 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  </div>
 
  <div class="planner-week-panel">
-  <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
-  <div class="planner-timeline-wrap"><div id="plannerTimeline" class="planner-timeline"></div></div>
+  <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end"><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span><button type="button" class="secondary" id="homeCalendarToggle" aria-expanded="true" style="padding:8px 12px;font-size:12px">Takvimi küçült</button></div></div>
+  <div class="planner-timeline-wrap" id="homeCalendarBody"><div id="plannerTimeline" class="planner-timeline"></div></div>
  </div>
 
  <div class="card" style="margin-top:16px"><div class="card"><div class="title">Arkadaşların</div><div id="homeFriends" class="empty">Arkadaşların burada görünecek.</div></div></div>>
@@ -790,6 +790,18 @@ async function loadPlanner(){
  if(error){msg("Planlar yüklenemedi: "+error.message,"planMsg");return;}
  plannerRows=data||[];renderPlanner();
 }
+const homeCalendarToggle=$("homeCalendarToggle");
+const homeCalendarBody=$("homeCalendarBody");
+let homeCalendarCollapsed=localStorage.getItem("studyflow_home_calendar_collapsed")==="true";
+function setHomeCalendarCollapsed(collapsed){
+ homeCalendarCollapsed=collapsed;
+ homeCalendarBody.style.display=collapsed?"none":"";
+ homeCalendarToggle.textContent=collapsed?"Takvimi genişlet":"Takvimi küçült";
+ homeCalendarToggle.setAttribute("aria-expanded",String(!collapsed));
+ localStorage.setItem("studyflow_home_calendar_collapsed",String(collapsed));
+}
+homeCalendarToggle.onclick=()=>setHomeCalendarCollapsed(!homeCalendarCollapsed);
+setHomeCalendarCollapsed(homeCalendarCollapsed);
 function renderPlanner(){
  $("plannerWeekLabel").textContent=plannerRangeLabel(plannerWeekStart);
  const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"],hours=Array.from({length:17},(_,i)=>i+7);
