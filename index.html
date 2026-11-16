@@ -309,7 +309,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="timerView">
- <div class="card"><div class="title">Çalışma oturumu</div><p class="muted">Kronometreyi başlat, bitirdiğinde kaydet. Kaydedilen süre istatistiklerine eklenir.</p><div class="timer"><div class="clock" id="clock2">00:00:00</div><div class="actions"><button id="start2">Başlat</button><button class="secondary" id="pause2">Duraklat</button><button class="secondary" id="reset2">Sıfırla</button><button id="save2">Kaydet</button></div></div></div>
+ <div class="card"><div class="title">Çalışma oturumu</div><p class="muted">Planlı bir ders seçersen süre 30 dakikada bir otomatik kaydedilir ve hedefe ulaşınca görev tamamlanır.</p><label for="timerPlanSelect">Planlanan ders</label><select id="timerPlanSelect" style="width:100%;margin:8px 0 14px"><option value="">Genel çalışma (plansız)</option></select><div class="small" id="timerPlanStatus" aria-live="polite">İstersen çalışma planlarından birini seç.</div><div class="timer"><div class="clock" id="clock2">00:00:00</div><div class="actions"><button id="start2">Başlat</button><button class="secondary" id="pause2">Duraklat</button><button class="secondary" id="reset2">Sıfırla</button><button id="save2">Kaydet</button></div></div></div>
 </section>
 
 <section class="view" id="pomodoro">
@@ -421,7 +421,7 @@ const configured = SUPABASE_URL.startsWith("https://") &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.localStorage}}) : null;
 const $ = id => document.getElementById(id);
-let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null;
+let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null, timerSavedSeconds=0, timerPlanId="", timerFlushInFlight=false;
 let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null, friendsRefreshInterval=null, chatLoadInFlight=false;
 
 function msg(t,el="authMsg"){ $(el).textContent=t; }
@@ -874,6 +874,7 @@ function renderPlanner(){
  $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><div class="planner-task-subject"><i class="planner-task-dot"></i><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong></div><div class="planner-task-meta">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+String(p.start_time||"09:00").slice(0,5)+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="planner-task-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
  document.querySelectorAll("[data-plan-toggle]").forEach(btn=>btn.onclick=()=>togglePlan(btn.dataset.planToggle));
  document.querySelectorAll("[data-plan-delete]").forEach(btn=>btn.onclick=()=>deletePlan(btn.dataset.planDelete));
+  refreshTimerPlanOptions();
 }
 function refreshPlanTopicOptions(){
  const subjectId=$("planSubject").value,topics=studyTopics.filter(t=>t.subject_id===subjectId);
@@ -906,15 +907,23 @@ $("addPlan").onclick=async()=>{
 };
 async function togglePlan(id){
  const row=plannerRows.find(p=>String(p.id)===String(id));if(!row)return;
- const {error}=await sb.from("study_plans").update({completed:!row.completed}).eq("id",id).eq("user_id",user.id);
- if(error)return msg("Görev güncellenemedi: "+error.message,"planMsg");
- await loadPlanner();
+ if(!row.completed){
+  const {error}=await sb.rpc("complete_study_plan",{p_plan_id:id});
+  if(error)return msg("Görev tamamlanamadı: "+error.message,"planMsg");
+ }else{
+  const {error:removeError}=await sb.from("study_sessions").delete().eq("plan_id",id).eq("user_id",user.id);
+  if(removeError)return msg("Çalışma süresi geri alınamadı: "+removeError.message,"planMsg");
+  const {error}=await sb.from("study_plans").update({completed:false}).eq("id",id).eq("user_id",user.id);
+  if(error)return msg("Görev durumu güncellenemedi: "+error.message,"planMsg");
+ }
+ await loadPlanner();await refreshDashboard();
 }
 async function deletePlan(id){
- if(!confirm("Bu çalışma görevini silmek istiyor musun?"))return;
+ if(!confirm("Bu çalışma görevini ve bu plana bağlı kaydedilmiş süreleri silmek istiyor musun? Günlük toplamdan da düşülecek."))return;
+ if(timerPlanId===String(id)){pauseTimer();timerPlanId="";timerSavedSeconds=0;timerSeconds=0;paint();}
  const {error}=await sb.from("study_plans").delete().eq("id",id).eq("user_id",user.id);
  if(error)return msg("Görev silinemedi: "+error.message,"planMsg");
- await loadPlanner();
+ await loadPlanner();await refreshDashboard();
 }
 $("plannerPrev").onclick=()=>{plannerWeekStart=shiftDate(plannerWeekStart,-7);plannerSelectedDate=dateKey(plannerWeekStart);$("planDate").value=plannerSelectedDate;loadPlanner();};
 $("plannerNext").onclick=()=>{plannerWeekStart=shiftDate(plannerWeekStart,7);plannerSelectedDate=dateKey(plannerWeekStart);$("planDate").value=plannerSelectedDate;loadPlanner();};
@@ -932,16 +941,60 @@ function updateAgsCountdown(){
 updateAgsCountdown();setInterval(updateAgsCountdown,1000);
 
 function paint(){if($("clock"))$("clock").textContent=fmt(timerSeconds);if($("clock2"))$("clock2").textContent=fmt(timerSeconds);}
-function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();}
+function selectedTimerPlan(){return plannerRows.find(p=>String(p.id)===String(timerPlanId))||null;}
+function refreshTimerPlanOptions(){
+ const el=$("timerPlanSelect");if(!el)return;
+ const current=timerPlanId;
+ const pending=plannerRows.filter(p=>!p.completed);
+ el.innerHTML='<option value="">Genel çalışma (plansız)</option>'+pending.map(p=>'<option value="'+p.id+'">'+escapeHtml(p.subject)+' · '+escapeHtml(p.plan_date)+' · '+Number(p.planned_minutes)+' dk</option>').join("");
+ if(pending.some(p=>String(p.id)===current))el.value=current;else if(!current)el.value="";
+}
+$("timerPlanSelect").onchange=async()=>{
+ if(timerRunning)return alert("Ders değiştirmek için önce kronometreyi duraklat.");
+ timerPlanId=$("timerPlanSelect").value;timerSeconds=0;timerSavedSeconds=0;paint();
+ if(timerPlanId){
+  const {data,error}=await sb.from("study_sessions").select("seconds").eq("plan_id",timerPlanId).eq("user_id",user.id);
+  if(error){alert("Plan süresi alınamadı: "+error.message);timerPlanId="";$("timerPlanSelect").value="";return;}
+  timerSavedSeconds=(data||[]).reduce((sum,x)=>sum+Number(x.seconds||0),0);
+  const p=selectedTimerPlan();
+  $("timerPlanStatus").textContent=p?(p.subject+" · "+Math.round(timerSavedSeconds/60)+"/"+p.planned_minutes+" dk kaydedildi"):"";
+ }else $("timerPlanStatus").textContent="Genel çalışma: 30 dakikada bir otomatik kaydedilir.";
+};
+async function flushTimerProgress(force=false){
+ if(timerFlushInFlight||!user)return;
+ const elapsed=timerRunning?Math.floor((Date.now()-timerStart)/1000):timerSeconds;
+ let delta=elapsed-timerSavedSeconds;
+ if(delta<=0||(!force&&delta<1800))return;
+ const plan=selectedTimerPlan();
+ if(plan)delta=Math.min(delta,Math.max(0,Number(plan.planned_minutes)*60-timerSavedSeconds));
+ if(delta<=0)return;
+ timerFlushInFlight=true;
+ try{
+  const startedAt=new Date(timerStart+timerSavedSeconds*1000).toISOString();
+  const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject:plan?.subject||"Genel çalışma",seconds:delta,started_at:startedAt,plan_id:timerPlanId||null});
+  if(error)throw error;
+  timerSavedSeconds+=delta;
+  if($("timerPlanStatus"))$("timerPlanStatus").textContent=plan?(plan.subject+" · "+Math.round(timerSavedSeconds/60)+"/"+plan.planned_minutes+" dk kaydedildi"):"Son 30 dakikalık bölüm otomatik kaydedildi.";
+  await refreshDashboard();
+  if(plan&&timerSavedSeconds>=Number(plan.planned_minutes)*60){
+   if(timerRunning){timerSeconds=Number(plan.planned_minutes)*60;timerRunning=false;clearInterval(timerInterval);}
+   const {error:completeError}=await sb.rpc("complete_study_plan",{p_plan_id:plan.id});
+   if(completeError)throw completeError;
+   if($("timerPlanStatus"))$("timerPlanStatus").textContent="Hedef tamamlandı · "+plan.subject;
+   await loadPlanner();timerPlanId="";$("timerPlanSelect").value="";timerSeconds=0;timerSavedSeconds=0;paint();
+  }
+ }catch(e){if($("timerPlanStatus"))$("timerPlanStatus").textContent="Kayıt hatası: "+e.message;}
+ finally{timerFlushInFlight=false;}
+}
+function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();if(timerSeconds-timerSavedSeconds>=1800)flushTimerProgress(false);}
 function startTimer(){if(timerRunning)return;timerRunning=true;timerStart=Date.now()-timerSeconds*1000;timerInterval=setInterval(tick,500);}
-function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);}
-function resetTimer(){pauseTimer();timerSeconds=0;paint();}
+function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);flushTimerProgress(true);}
+function resetTimer(){if(timerRunning){pauseTimer();}timerSeconds=0;timerSavedSeconds=0;paint();}
 async function saveTimer(){
- pauseTimer();if(timerSeconds<1)return alert("Kaydedilecek süre yok.");
- const seconds=timerSeconds, subject="Genel çalışma";
- const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject,seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
- if(error)return alert(error.message);
- timerSeconds=0;paint();if($("timerMsg"))$("timerMsg").textContent="Oturum kaydedildi.";await refreshDashboard();
+ pauseTimer();
+ if(timerSeconds<=timerSavedSeconds)return alert("Kaydedilecek yeni süre yok.");
+ await flushTimerProgress(true);
+ if($("timerMsg"))$("timerMsg").textContent="Yeni süre kaydedildi."; 
 }
 ["start","start2"].forEach(id=>{const el=$(id);if(el)el.onclick=startTimer;});
 ["pause","pause2"].forEach(id=>{const el=$(id);if(el)el.onclick=pauseTimer;});
