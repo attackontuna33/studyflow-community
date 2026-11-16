@@ -41,6 +41,24 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .progress{height:9px;background:#101429;border-radius:20px;overflow:hidden;margin:10px 0}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--blue));border-radius:20px}.topic-actions{display:flex;gap:7px;flex-wrap:wrap}.topic-actions button{padding:7px 10px;font-size:11px}.topic-done{opacity:.68}.topic-done strong{text-decoration:line-through}.subject-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:800px){.sidebar{width:190px}.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}
 @media(max-width:620px){.shell{display:block}.sidebar{width:100%;padding:10px;position:sticky;top:0;z-index:3}.sidebar .logo{margin:4px 8px 10px;font-size:20px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;width:auto;padding:9px;font-size:12px}.main{padding:17px 12px}.top{align-items:flex-start}.stats{gap:9px}.card{padding:14px}.value{font-size:22px}.formrow{grid-template-columns:1fr}.clock{font-size:40px}}
+/* Mobile layout repair: prevent horizontal overflow and stack form fields */
+@media(max-width:620px){
+ html,body{width:100%;max-width:100%;overflow-x:hidden}
+ *,*::before,*::after{box-sizing:border-box}
+ #app,.shell,.main,.sidebar{width:100%;min-width:0;max-width:100%}
+ .sidebar{position:relative;top:auto;overflow:hidden}
+ .nav{display:flex;flex-wrap:wrap;overflow:visible;max-width:100%;gap:4px}
+ .nav button{flex:1 1 auto;white-space:normal;min-width:max-content;text-align:center}
+ .main{padding:16px 12px;margin:0}
+ .planner-form-grid{grid-template-columns:minmax(0,1fr)!important;gap:8px 0}
+ .planner-form-grid>div,.planner-form-grid label,.planner-duration{min-width:0;width:100%}
+ .planner-full{grid-column:auto}
+ .planner-form-grid input,.planner-form-grid select,.planner-duration input{width:100%;min-width:0;max-width:100%}
+ .planner-duration span{flex:0 0 auto}
+ .planner-form-panel,.planner-tasks-panel,.planner-week-panel{min-width:0;max-width:100%}
+ .top{flex-wrap:wrap}
+}
+
 
 .ags-countdown{margin:0 0 16px;padding:18px;background:linear-gradient(115deg,#28245a,#173b63);border:1px solid #4b5590;border-radius:16px}
 .ags-countdown-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
