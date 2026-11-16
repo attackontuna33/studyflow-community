@@ -6,8 +6,9 @@
   "r2_buckets": [
     { "binding": "PHOTOS", "bucket_name": "studyflow-one-view-photos" }
   ],
+  "migrations_dir": "worker/migrations",
   "d1_databases": [
-    { "binding": "DB", "database_name": "studyflow-chat-media", "database_id": "REPLACE_WITH_D1_DATABASE_ID" }
+    { "binding": "DB", "database_name": "studyflow-chat-media" }
   ],
   "vars": {
     "SUPABASE_URL": "https://fegitfmwvycokzidtvtp.supabase.co"
