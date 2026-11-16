@@ -6,3 +6,6 @@ window.STUDYFLOW_SUPABASE_URL =
 
 window.STUDYFLOW_SUPABASE_ANON_KEY =
 "sb_publishable_W6yW9zfEQTzVolp4PEtlLQ_CRv7CdtC";
+
+// Cloudflare Worker URL'si dağıtım tamamlanınca buraya eklenecek.
+window.STUDYFLOW_MEDIA_API = "";
