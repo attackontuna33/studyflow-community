@@ -4,14 +4,25 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-11-16",
   "r2_buckets": [
-    { "binding": "PHOTOS", "bucket_name": "studyflow-one-view-photos" }
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "studyflow-one-view-photos"
+    }
   ],
   "migrations_dir": "worker/migrations",
   "d1_databases": [
-    { "binding": "DB", "database_name": "studyflow-chat-media" }
+    {
+      "binding": "DB",
+      "database_name": "studyflow-chat-media"
+    }
   ],
   "vars": {
-    "SUPABASE_URL": "https://fegitfmwvycokzidtvtp.supabase.co"
+    "SUPABASE_URL": "https://fegitfmwvycokzidtvtp.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_W6yW9zfEQTzVolp4PEtlLQ_CRv7CdtC"
   },
-  "triggers": { "crons": ["*/15 * * * *"] }
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  }
 }
