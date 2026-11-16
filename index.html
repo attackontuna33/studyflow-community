@@ -885,10 +885,12 @@ function refreshPlanSubjectOptions(){
  if(studySubjects.some(x=>String(x.id)===current))$("planSubject").value=current;
  refreshPlanTopicOptions();
 }
+if(!$("planDate").value){$("planDate").value=dateKey(new Date());}
 $("planSubject").onchange=refreshPlanTopicOptions;
 $("planDate").onchange=()=>{if($("planDate").value){plannerSelectedDate=$("planDate").value;const picked=parseLocalDate(plannerSelectedDate);plannerWeekStart=startOfWeek(picked);loadPlanner();}};
 $("addPlan").onclick=async()=>{
- const plan_date=$("planDate").value,subjectId=$("planSubject").value,topicId=$("planTopic").value,minutes=Number($("planMinutes").value);
+ const plan_date=$("planDate").value||plannerSelectedDate||dateKey(new Date()),subjectId=$("planSubject").value,topicId=$("planTopic").value,minutes=Number($("planMinutes").value);
+ if(!$("planDate").value){$("planDate").value=plan_date;}
  const subject=studySubjects.find(x=>String(x.id)===subjectId);
  const topic=studyTopics.find(x=>String(x.id)===topicId);
  if(!plan_date)return msg("Önce tarih seç.","planMsg");
