@@ -560,11 +560,20 @@ async function loadFriends(){
  if(e)throw e;
  const {data:pres,error:pe}=await sb.from("user_presence").select("user_id,last_seen_at").in("user_id",ids);
  if(pe)throw pe;
- friends=(ps||[]).map(p=>({...p,online:!!pres?.find(x=>x.user_id===p.id && Date.now()-new Date(x.last_seen_at).getTime()<40000)}));
+ friends=(ps||[]).map(p=>{const presence=pres?.find(x=>x.user_id===p.id);const lastSeenAt=presence?.last_seen_at||null;return {...p,lastSeenAt,online:!!lastSeenAt && Date.now()-new Date(lastSeenAt).getTime()<40000};});
  renderFriends();
 }
+function formatLastSeen(value){
+ if(!value)return "Son görülme bilgisi yok";
+ const date=new Date(value);if(Number.isNaN(date.getTime()))return "Son görülme bilgisi yok";
+ const now=new Date(),time=date.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+ if(date.toDateString()===now.toDateString())return "Son görülme: bugün "+time;
+ const yesterday=new Date(now);yesterday.setDate(now.getDate()-1);
+ if(date.toDateString()===yesterday.toDateString())return "Son görülme: dün "+time;
+ return "Son görülme: "+date.toLocaleDateString("tr-TR",{day:"2-digit",month:"short",year:date.getFullYear()===now.getFullYear()?undefined:"numeric"})+" "+time;
+}
 function renderFriends(){
- const html=friends.map(f=>`<div class="row friend-row-open" data-friend-profile="${f.id}" role="button" tabindex="0" title="Planlarını görüntüle"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">Profili ve çalışma planını gör</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
+ const html=friends.map(f=>`<div class="row friend-row-open" data-friend-profile="${f.id}" role="button" tabindex="0" title="Planlarını görüntüle"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">Profili ve çalışma planını gör</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":formatLastSeen(f.lastSeenAt)}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
  document.querySelectorAll("[data-friend-profile]").forEach(row=>{
