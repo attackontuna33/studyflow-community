@@ -127,6 +127,19 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .planner-table-minutes small{display:none}
 @media(max-width:620px){.planner-table th:first-child{width:105px}.planner-table th:nth-child(3){width:65px}.planner-table-date{width:32px;height:36px;flex-basis:32px}.planner-table-day{gap:6px}}
 
+
+.friend-profile-overlay{position:fixed;inset:0;z-index:1100;background:#080a16d9;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+.friend-profile-card{width:min(720px,100%);max-height:90vh;overflow:auto;background:#191c32;border:1px solid #3b4265;border-radius:20px;padding:22px;box-shadow:0 24px 80px #0009}
+.friend-profile-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.friend-profile-person{display:flex;align-items:center;gap:12px;min-width:0}.friend-profile-person img{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#303653}.friend-profile-person strong{font-size:17px}
+.friend-profile-section{margin-top:19px}.friend-profile-section-title{font-weight:800;font-size:14px;margin-bottom:9px}
+.friend-profile-day-task{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #2c324e}.friend-profile-day-task:last-child{border-bottom:0}
+.friend-profile-day-task strong{font-size:12px}.friend-profile-day-task small{display:block;color:#969fbe;font-size:10px;margin-top:4px}
+.friend-profile-week{width:100%;border-collapse:collapse;font-size:11px}.friend-profile-week th{text-align:left;color:#8992b2;font-size:9px;letter-spacing:1px;padding:8px;border-bottom:1px solid #343a5b}.friend-profile-week td{padding:9px 8px;border-bottom:1px solid #2c324e;vertical-align:top}.friend-profile-week tr:last-child td{border-bottom:0}.friend-profile-week .week-day{font-weight:800;white-space:nowrap}.friend-profile-week .week-empty{color:#68718f}
+.friend-profile-note{margin-top:15px;color:#7882a3;font-size:10px}
+.friend-row-open{cursor:pointer;border-radius:10px;padding-left:7px;padding-right:7px;margin-left:-7px;margin-right:-7px}.friend-row-open:hover{background:#252a46}
+@media(max-width:620px){.friend-profile-card{padding:15px;border-radius:16px}.friend-profile-week{font-size:10px}.friend-profile-week td{padding:8px 5px}}
+
 </style>
 </head>
 <body>
@@ -299,6 +312,14 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
  <button type="button" onclick="closeAvatarPreview()" aria-label="Kapat" style="position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;font-size:24px;background:#303653">×</button>
  <img id="avatarPreviewImage" alt="Büyütülmüş profil fotoğrafı" style="max-width:94vw;max-height:86vh;object-fit:contain;border-radius:14px;box-shadow:0 12px 50px #0009" onclick="event.stopPropagation()">
 </div>
+<div id="friendProfileModal" class="friend-profile-overlay" style="display:none" onclick="if(event.target===this)closeFriendProfile()">
+ <div class="friend-profile-card">
+  <div class="friend-profile-head"><div class="friend-profile-person"><img id="friendProfileAvatar" alt="Profil fotoğrafı"><div><strong id="friendProfileName">Arkadaş profili</strong><div class="small" id="friendProfileStatus"></div></div></div><button class="secondary" type="button" onclick="closeFriendProfile()">×</button></div>
+  <div class="friend-profile-section"><div class="friend-profile-section-title">Bugünün planı</div><div id="friendDailyPlans" class="empty">Yükleniyor…</div></div>
+  <div class="friend-profile-section"><div class="friend-profile-section-title">Haftalık plan</div><div id="friendWeeklyPlans" class="empty">Yükleniyor…</div></div>
+  <div class="friend-profile-note">Bu planları yalnızca görüntüleyebilirsin.</div>
+ </div>
+</div>
 <script>
 /* SUPABASE AYARLARI: SQL kurulumundan sonra kendi proje bilgilerini gir. */
 const SUPABASE_URL = window.STUDYFLOW_SUPABASE_URL || "";
@@ -368,6 +389,31 @@ $("deleteMyAccount").onclick=async()=>{
   stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();
  }catch(e){$("deleteAccountMsg").textContent="Silme işlemi başarısız: "+e.message;button.disabled=false;}
 };
+async function openFriendProfile(friendId){
+ const friend=friends.find(f=>String(f.id)===String(friendId));if(!friend)return;
+ const modal=$("friendProfileModal");modal.style.display="flex";
+ $("friendProfileName").textContent=friend.display_name||friend.username;
+ $("friendProfileStatus").textContent=friend.online?"Çevrimiçi":"Çevrimdışı";
+ const avatar=$("friendProfileAvatar");avatar.src=friend.avatar_url||"";avatar.style.display=friend.avatar_url?"block":"none";
+ $("friendDailyPlans").innerHTML='<div class="empty">Yükleniyor…</div>';
+ $("friendWeeklyPlans").innerHTML='<div class="empty">Yükleniyor…</div>';
+ const now=new Date(),todayKey=dateKey(now),weekStart=startOfWeek(now),weekEnd=shiftDate(weekStart,6);
+ const {data,error}=await sb.from("study_plans").select("plan_date,subject,topic,planned_minutes,completed").eq("user_id",friend.id).gte("plan_date",dateKey(weekStart)).lte("plan_date",dateKey(weekEnd)).order("plan_date",{ascending:true});
+ if(error){
+  $("friendDailyPlans").innerHTML='<div class="empty">Planlar görüntülenemedi: '+escapeHtml(error.message)+'</div>';
+  $("friendWeeklyPlans").innerHTML="";
+  return;
+ }
+ const plans=data||[],daily=plans.filter(p=>p.plan_date===todayKey);
+ $("friendDailyPlans").innerHTML=daily.map(p=>'<div class="friend-profile-day-task"><div><strong>'+escapeHtml(p.subject)+'</strong><small>'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+Number(p.planned_minutes)+' dk</small></div><span class="pill">'+(p.completed?'Tamamlandı':'Planlandı')+'</span></div>').join("")||'<div class="empty">Bugün için plan eklenmemiş.</div>';
+ const days=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+ $("friendWeeklyPlans").innerHTML='<div style="overflow-x:auto"><table class="friend-profile-week"><thead><tr><th>GÜN</th><th>ÇALIŞMA</th><th>SÜRE</th></tr></thead><tbody>'+days.map((name,i)=>{
+  const d=shiftDate(weekStart,i),key=dateKey(d),rows=plans.filter(p=>p.plan_date===key),mins=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0);
+  return '<tr><td class="week-day">'+name+' '+d.getDate()+'</td><td>'+(rows.length?rows.map(p=>'<div style="margin-bottom:5px">'+escapeHtml(p.subject)+(p.topic?' · '+escapeHtml(p.topic):'')+' <span style="color:'+(p.completed?'#70dcb7':'#9ba1c2')+'">· '+(p.completed?'Bitti':'Planlandı')+'</span></div>').join(""):'<span class="week-empty">—</span>')+'</td><td>'+mins+' dk</td></tr>';
+ }).join("")+'</tbody></table></div>';
+}
+function closeFriendProfile(){$("friendProfileModal").style.display="none";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFriendProfile();});
 function showAvatarPreview(src){
  if(!src)return;
  $("avatarPreviewImage").src=src;
@@ -419,10 +465,13 @@ async function loadFriends(){
  renderFriends();
 }
 function renderFriends(){
- const html=friends.map(f=>`<div class="row"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
+ const html=friends.map(f=>`<div class="row friend-row-open" data-friend-profile="${f.id}" role="button" tabindex="0" title="Planlarını görüntüle"><img src="${escapeHtml(f.avatar_url||"")}" alt="Profil fotoğrafı" onerror="this.style.display='none'" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#303653"><div class="grow"><strong>${escapeHtml(f.display_name||f.username)}</strong><div class="small">Profili ve çalışma planını gör</div></div><span class="small"><i class="dot ${f.online?"online":"offline"}"></i>${f.online?"Çevrimiçi":"Çevrimdışı"}</span></div>`).join("");
  $("friendsList").innerHTML=html||'<div class="empty">Henüz arkadaş eklemedin.</div>';
- $("friendsList").querySelectorAll("img").forEach(img=>{img.style.cursor="zoom-in";img.onclick=()=>showAvatarPreview(img.src);});
  $("homeFriends").innerHTML=html||'<div class="empty">Arkadaş ekleyerek başlayabilirsin.</div>';
+ document.querySelectorAll("[data-friend-profile]").forEach(row=>{
+  row.onclick=()=>openFriendProfile(row.dataset.friendProfile);
+  row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openFriendProfile(row.dataset.friendProfile);}};
+ });
 }
 $("sendRequest").onclick=async()=>{
  const uname=cleanUsername($("friendUsername").value);
