@@ -988,7 +988,7 @@ async function flushTimerProgress(force=false){
 }
 function tick(){if(!timerRunning)return;timerSeconds=Math.floor((Date.now()-timerStart)/1000);paint();if(timerSeconds-timerSavedSeconds>=1800)flushTimerProgress(false);}
 function startTimer(){if(timerRunning)return;timerRunning=true;timerStart=Date.now()-timerSeconds*1000;timerInterval=setInterval(tick,500);}
-function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);flushTimerProgress(true);}
+function pauseTimer(){if(!timerRunning)return;tick();timerRunning=false;clearInterval(timerInterval);}
 function resetTimer(){if(timerRunning){pauseTimer();}timerSeconds=0;timerSavedSeconds=0;paint();}
 async function saveTimer(){
  pauseTimer();
