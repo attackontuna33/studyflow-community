@@ -302,6 +302,7 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
    <div class="pomodoro-controls"><button id="pomoStart">Başlat</button><button class="secondary" id="pomoReset">Sıfırla</button><button class="secondary" id="pomoSkip">Atla</button></div>
    <div class="pomodoro-session">Tamamlanan odak oturumu <strong id="pomoCount">0</strong></div>
   </div>
+  <div class="pomodoro-subject"><label for="pomoSubject">Çalışılacak ders</label><select id="pomoSubject"><option value="">Genel çalışma</option></select></div>
   <div class="pomodoro-settings">
    <div><label>Odak süresi</label><div class="pomo-setting-input"><input id="pomoFocusMinutes" type="number" min="5" max="90" value="25"><span>dk</span></div></div>
    <div><label>Kısa mola</label><div class="pomo-setting-input"><input id="pomoShortMinutes" type="number" min="1" max="30" value="5"><span>dk</span></div></div>
@@ -635,6 +636,7 @@ async function loadCourses(){
  ]);
  if(se)throw se;if(te)throw te;studySubjects=subs||[];studyTopics=topics||[];renderCourses();
  if($("planSubject"))refreshPlanSubjectOptions();
+ if($("pomoSubject")){const ps=$("pomoSubject"),pv=ps.value;ps.innerHTML='<option value="">Genel çalışma</option>'+studySubjects.map(x=>'<option value="'+escapeHtml(x.name)+'">'+escapeHtml(x.exam)+" · "+escapeHtml(x.name)+'</option>').join("");if(studySubjects.some(x=>x.name===pv))ps.value=pv;}
 }
 function renderCourses(){
  const select=$("topicSubject"),keep=select.value;
@@ -896,7 +898,7 @@ async function pomoComplete(){
  if(finishedMode==="focus"){
   pomoCompleted++;
   const seconds=pomoDuration("focus");
-  const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject:$("subject").value,seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
+  const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject:$("pomoSubject")?.value||"Genel çalışma",seconds,started_at:new Date(Date.now()-seconds*1000).toISOString()});
   if(error)alert("Oturum tamamlandı ancak kaydedilemedi: "+error.message);
   else await refreshDashboard();
   const cycle=Math.max(2,Math.min(8,Number($("pomoCycleCount").value)||4));
