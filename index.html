@@ -164,6 +164,20 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .timeline-event:hover{filter:brightness(1.12);z-index:4}
 @media(max-width:620px){.planner-timeline{min-width:680px}.timeline-head,.timeline-body{grid-template-columns:48px repeat(7,minmax(0,1fr))}.timeline-hours{grid-template-rows:repeat(17,72px)}.timeline-day-column{grid-template-rows:repeat(17,72px);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 71px,#34405b 71px,#34405b 72px)}.timeline-hour{font-size:9px}.timeline-event{left:2px;right:2px;padding:5px 4px}.timeline-event strong{font-size:9px}.timeline-event span,.timeline-event small{font-size:8px}}
 
+
+/* StudyFlow achievements */
+.achievement-panel{background:linear-gradient(145deg,#1c2039,#191c32);border:1px solid #353b5c}
+.achievement-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+.achievement-count{padding:7px 11px;border:1px solid #514a7d;background:#302c50;color:#c5baff;border-radius:20px;font-size:11px;font-weight:800;white-space:nowrap}
+.achievement-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.achievement-item{display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid #343a59;border-radius:13px;background:#20243d}
+.achievement-item.unlocked{border-color:#6257a0;background:linear-gradient(135deg,#302b54,#222b48)}
+.achievement-icon{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;border-radius:12px;background:#303550;color:#8e96b5;font-size:20px;filter:grayscale(1);opacity:.6}
+.achievement-item.unlocked .achievement-icon{background:linear-gradient(145deg,#8c75f4,#526fe0);color:white;filter:none;opacity:1;box-shadow:0 5px 14px #090d2d66}
+.achievement-item strong{display:block;font-size:11px;line-height:1.3}.achievement-item small{display:block;margin-top:4px;color:#929bb9;font-size:9px;line-height:1.3}
+.achievement-item.unlocked small{color:#b9b4e8}
+@media(max-width:620px){.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.achievement-item{padding:9px;gap:7px}.achievement-icon{width:32px;height:32px;flex-basis:32px;font-size:16px}.achievement-item strong{font-size:10px}.achievement-item small{font-size:8px}}
+
 </style>
 </head>
 <body>
@@ -209,6 +223,10 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
   <div class="card"><div class="kicker">Bugünkü çalışma</div><div class="value" id="todayTime">00:00:00</div></div>
   <div class="card"><div class="kicker">Günlük seri</div><div class="value" id="myStreak">0 🔥</div></div>
   <div class="card"><div class="kicker">Haftalık çalışma</div><div class="value" id="weekTime">0 dk</div></div>
+ </div>
+ <div class="card achievement-panel" style="margin-bottom:16px">
+  <div class="achievement-head"><div><div class="kicker">İLERLEMENİ KUTLA</div><div class="title">Başarıların</div><div class="small">Çalıştıkça yeni rozetler kazanırsın. Her rozet otomatik açılır.</div></div><div class="achievement-count" id="achievementCount">0 / 6</div></div>
+  <div class="achievement-grid" id="achievementGrid"><div class="empty">Başarıların yükleniyor…</div></div>
  </div>
  <div class="grid layout">
   <div class="card"><div class="title">⏱ Odak kronometresi</div><div class="timer">
@@ -521,8 +539,31 @@ async function acceptRequest(id){
  // Veritabanı tetikleyicisi, kabul edilen isteği güvenli biçimde arkadaşlığa dönüştürür.
  await loadFriends();await renderRequests();await renderLeaderboard("week");
 }
+function renderAchievements(rows){
+ const activeDays=new Set((rows||[]).filter(x=>Number(x.seconds)>=1800).map(x=>x.day));
+ const totalSeconds=(rows||[]).reduce((sum,x)=>sum+Number(x.seconds||0),0);
+ let current=0,d=new Date();
+ while(activeDays.has(d.toLocaleDateString("sv-SE"))){current++;d.setDate(d.getDate()-1);}
+ if(!activeDays.has(today())){d=new Date();d.setDate(d.getDate()-1);while(activeDays.has(d.toLocaleDateString("sv-SE"))){current++;d.setDate(d.getDate()-1);}}
+ const badges=[
+  {icon:"🌱",name:"İlk adım",desc:"30 dakika çalış",earned:totalSeconds>=1800},
+  {icon:"🔥",name:"3 günlük seri",desc:"3 gün üst üste çalış",earned:current>=3||longestStudyStreak(activeDays)>=3},
+  {icon:"⚡",name:"7 günlük seri",desc:"7 gün üst üste çalış",earned:current>=7||longestStudyStreak(activeDays)>=7},
+  {icon:"📚",name:"İstikrarlı",desc:"7 farklı gün çalış",earned:activeDays.size>=7},
+  {icon:"🏅",name:"10 saat",desc:"Toplam 10 saat çalış",earned:totalSeconds>=36000},
+  {icon:"👑",name:"25 saat",desc:"Toplam 25 saat çalış",earned:totalSeconds>=90000}
+ ];
+ const earned=badges.filter(x=>x.earned).length;
+ $("achievementCount").textContent=earned+" / "+badges.length;
+ $("achievementGrid").innerHTML=badges.map(b=>'<div class="achievement-item '+(b.earned?'unlocked':'')+'"><span class="achievement-icon">'+b.icon+'</span><div><strong>'+b.name+'</strong><small>'+b.desc+(b.earned?' · Kazanıldı':' · Kilitli')+'</small></div></div>').join("");
+}
+function longestStudyStreak(days){
+ const sorted=[...days].sort();let best=0,run=0,prev=null;
+ sorted.forEach(key=>{const d=parseLocalDate(key);if(prev&&Math.round((d-prev)/86400000)===1)run++;else run=1;best=Math.max(best,run);prev=d;});
+ return best;
+}
 async function refreshDashboard(){
- const {data:mine,error}=await sb.from("daily_stats").select("day,seconds").eq("user_id",user.id).gte("day",sinceDate(365)).order("day",{ascending:false});
+ const {data:mine,error}=await sb.from("daily_stats").select("day,seconds").eq("user_id",user.id).order("day",{ascending:false});
  if(error)throw error;
  const todayRow=mine.find(x=>x.day===today());$("todayTime").textContent=fmt(todayRow?.seconds||0);
  let week=(mine||[]).filter(x=>x.day>=sinceDate(6)).reduce((a,x)=>a+x.seconds,0);
@@ -533,6 +574,7 @@ async function refreshDashboard(){
  // Bugün henüz 30 dk olmadıysa, dün biten seri gününü de göster.
  if(!days.has(today())){d=new Date();d.setDate(d.getDate()-1);while(days.has(d.toLocaleDateString("sv-SE"))){streak++;d.setDate(d.getDate()-1);}}
  $("myStreak").textContent=streak+" 🔥";
+ renderAchievements(mine||[]);
  $("myRecent").innerHTML=(mine||[]).slice(0,7).map(x=>`<div class="row"><div class="grow">${x.day}</div><span class="pill">${fmt(x.seconds)}</span></div>`).join("")||'<div class="empty">Henüz çalışma kaydı yok.</div>';
  await loadFriends();await renderRequests();await renderLeaderboard("week");
 }
