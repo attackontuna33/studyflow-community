@@ -421,7 +421,7 @@ const configured = SUPABASE_URL.startsWith("https://") &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.localStorage}}) : null;
 const $ = id => document.getElementById(id);
-let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null, timerSavedSeconds=0, timerPlanId="", timerFlushInFlight=false;
+let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null, timerSavedSeconds=0, timerPlanLoggedSeconds=0, timerPlanId="", timerFlushInFlight=false;
 let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null, friendsRefreshInterval=null, chatLoadInFlight=false;
 
 function msg(t,el="authMsg"){ $(el).textContent=t; }
@@ -951,13 +951,13 @@ function refreshTimerPlanOptions(){
 }
 $("timerPlanSelect").onchange=async()=>{
  if(timerRunning)return alert("Ders değiştirmek için önce kronometreyi duraklat.");
- timerPlanId=$("timerPlanSelect").value;timerSeconds=0;timerSavedSeconds=0;paint();
+ timerPlanId=$("timerPlanSelect").value;timerSeconds=0;timerSavedSeconds=0;timerPlanLoggedSeconds=0;paint();
  if(timerPlanId){
   const {data,error}=await sb.from("study_sessions").select("seconds").eq("plan_id",timerPlanId).eq("user_id",user.id);
   if(error){alert("Plan süresi alınamadı: "+error.message);timerPlanId="";$("timerPlanSelect").value="";return;}
-  timerSavedSeconds=(data||[]).reduce((sum,x)=>sum+Number(x.seconds||0),0);
+  timerPlanLoggedSeconds=(data||[]).reduce((sum,x)=>sum+Number(x.seconds||0),0);
   const p=selectedTimerPlan();
-  $("timerPlanStatus").textContent=p?(p.subject+" · "+Math.round(timerSavedSeconds/60)+"/"+p.planned_minutes+" dk kaydedildi"):"";
+  $("timerPlanStatus").textContent=p?(p.subject+" · "+Math.round(timerPlanLoggedSeconds/60)+"/"+p.planned_minutes+" dk kaydedildi"):"";
  }else $("timerPlanStatus").textContent="Genel çalışma: 30 dakikada bir otomatik kaydedilir.";
 };
 async function flushTimerProgress(force=false){
@@ -966,22 +966,22 @@ async function flushTimerProgress(force=false){
  let delta=elapsed-timerSavedSeconds;
  if(delta<=0||(!force&&delta<1800))return;
  const plan=selectedTimerPlan();
- if(plan)delta=Math.min(delta,Math.max(0,Number(plan.planned_minutes)*60-timerSavedSeconds));
+ if(plan)delta=Math.min(delta,Math.max(0,Number(plan.planned_minutes)*60-timerPlanLoggedSeconds-timerSavedSeconds));
  if(delta<=0)return;
  timerFlushInFlight=true;
  try{
   const startedAt=new Date(timerStart+timerSavedSeconds*1000).toISOString();
   const {error}=await sb.from("study_sessions").insert({user_id:user.id,subject:plan?.subject||"Genel çalışma",seconds:delta,started_at:startedAt,plan_id:timerPlanId||null});
   if(error)throw error;
-  timerSavedSeconds+=delta;
-  if($("timerPlanStatus"))$("timerPlanStatus").textContent=plan?(plan.subject+" · "+Math.round(timerSavedSeconds/60)+"/"+plan.planned_minutes+" dk kaydedildi"):"Son 30 dakikalık bölüm otomatik kaydedildi.";
+  timerSavedSeconds+=delta;if(plan)timerPlanLoggedSeconds+=delta;
+  if($("timerPlanStatus"))$("timerPlanStatus").textContent=plan?(plan.subject+" · "+Math.round(timerPlanLoggedSeconds/60)+"/"+plan.planned_minutes+" dk kaydedildi"):"Son 30 dakikalık bölüm otomatik kaydedildi.";
   await refreshDashboard();
-  if(plan&&timerSavedSeconds>=Number(plan.planned_minutes)*60){
+  if(plan&&timerPlanLoggedSeconds>=Number(plan.planned_minutes)*60){
    if(timerRunning){timerSeconds=Number(plan.planned_minutes)*60;timerRunning=false;clearInterval(timerInterval);}
    const {error:completeError}=await sb.rpc("complete_study_plan",{p_plan_id:plan.id});
    if(completeError)throw completeError;
    if($("timerPlanStatus"))$("timerPlanStatus").textContent="Hedef tamamlandı · "+plan.subject;
-   await loadPlanner();timerPlanId="";$("timerPlanSelect").value="";timerSeconds=0;timerSavedSeconds=0;paint();
+   await loadPlanner();timerPlanId="";$("timerPlanSelect").value="";timerSeconds=0;timerSavedSeconds=0;timerPlanLoggedSeconds=0;paint();
   }
  }catch(e){if($("timerPlanStatus"))$("timerPlanStatus").textContent="Kayıt hatası: "+e.message;}
  finally{timerFlushInFlight=false;}
