@@ -455,7 +455,29 @@ async function afterLogin(u){
  if(activeButton)$("pageTitle").textContent=activeButton.textContent.trim();
  await loadFriends();await refreshDashboard();await loadCourses();if(targetView==="planner"||targetView==="home"){refreshPlanSubjectOptions();await loadPlanner();}startPresence();await loadChatMessages();setConnection(true);
 }
-$("logout").onclick=async()=>{stopPresence();await sb.auth.signOut();user=null;profile=null;showAuth();};
+$("logout").onclick=async()=>{
+ const button=$("logout");
+ if(button.disabled)return;
+ button.disabled=true;
+ button.textContent="Çıkış yapılıyor…";
+ try{
+  try{stopPresence();}catch(e){console.warn("Bağlantılar kapatılırken hata:",e);}
+  const {error}=await sb.auth.signOut({scope:"local"});
+  if(error)throw error;
+  user=null;profile=null;
+  showAuth();
+  $("password").value="";
+  msg("Güvenli şekilde çıkış yapıldı.");
+ }catch(e){
+  // Yerel oturum kapatma başarısız olsa bile kullanıcı arayüzünü giriş ekranına döndür.
+  user=null;profile=null;
+  showAuth();
+  msg("Çıkış tamamlanamadı: "+(e.message||"Bilinmeyen hata"));
+ }finally{
+  button.disabled=false;
+  button.textContent="Çıkış yap";
+ }
+};
 $("deleteMyAccount").onclick=async()=>{
  const confirmation=prompt("Hesabını ve ilişkili verilerini kalıcı olarak silmek için SİL yaz.");
  if(confirmation!=="SİL")return;
