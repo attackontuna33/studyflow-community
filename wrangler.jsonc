@@ -13,7 +13,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "studyflow-chat-media"
+      "database_name": "studyflow-chat-media",
+      "database_id": "fde9482c-bf55-413c-bc20-7b70a2dc81d3"
     }
   ],
   "vars": {
