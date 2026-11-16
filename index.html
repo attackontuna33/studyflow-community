@@ -436,7 +436,7 @@ const configured = SUPABASE_URL.startsWith("https://") &&
   !SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 const sb = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:window.localStorage}}) : null;
 const $ = id => document.getElementById(id);
-const MEDIA_API=(window.STUDYFLOW_MEDIA_API||"").replace(/\/$/,"");
+const MEDIA_FN_URL=SUPABASE_URL.replace(/\/$/,"")+"/functions/v1/chat-one-view-photos";
 let user=null, profile=null, signUpMode=false, friends=[], timerSeconds=0, timerStart=0, timerRunning=false, timerInterval=null, timerSavedSeconds=0, timerPlanLoggedSeconds=0, timerPlanId="", timerFlushInFlight=false;
 let presenceInterval=null, presenceChannel=null, dataChannel=null, chatChannel=null, chatRefreshInterval=null, friendsRefreshInterval=null, chatLoadInFlight=false, chatLastSeenAt="", chatToastTimer=null;
 
@@ -1125,13 +1125,13 @@ $("chatToast").onclick=()=>{
 async function mediaAuthHeaders(){
  const {data,error}=await sb.auth.getSession();
  if(error||!data.session?.access_token)throw new Error("Oturum bilgisi alınamadı.");
- return {Authorization:"Bearer "+data.session.access_token};
+ return {Authorization:"Bearer "+data.session.access_token, apikey:SUPABASE_ANON_KEY};
 }
 async function loadChatPhotos(){
- if(!user||!MEDIA_API)return;
+ if(!user)return;
  try{
   const headers=await mediaAuthHeaders();
-  const response=await fetch(MEDIA_API+"/photos",{headers});
+  const response=await fetch(MEDIA_FN_URL+"/list",{headers});
   const payload=await response.json();
   if(!response.ok)throw new Error(payload.error||"Fotoğraflar alınamadı.");
   const box=$("chatMessages");
@@ -1154,11 +1154,11 @@ async function loadChatPhotos(){
  }catch(e){console.warn("Tek görüntülemelik fotoğraflar:",e);}
 }
 async function openOneViewPhoto(id,button){
- if(!MEDIA_API)return;
+ 
  button.disabled=true;button.textContent="Açılıyor…";
  try{
   const headers=await mediaAuthHeaders();
-  const response=await fetch(MEDIA_API+"/photos/"+encodeURIComponent(id)+"/view",{method:"POST",headers});
+  const response=await fetch(MEDIA_FN_URL+"/view/"+encodeURIComponent(id),{method:"POST",headers});
   if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||"Fotoğraf açılamadı.");}
   const blob=await response.blob(),url=URL.createObjectURL(blob);
   $("oneViewImage").src=url;$("oneViewModal").style.display="flex";
@@ -1167,7 +1167,7 @@ async function openOneViewPhoto(id,button){
  }catch(e){alert(e.message);button.textContent="Açılamadı";button.disabled=true;}
 }
 $("chatPhotoButton").onclick=()=>{
- if(!MEDIA_API)return alert("Fotoğraf servisi henüz Cloudflare hesabına bağlanmadı. Kurulum tamamlanınca açılacak.");
+ if(!configured)return alert("Supabase bağlantısı yapılandırılmamış.");
  $("chatPhotoInput").click();
 };
 $("chatPhotoInput").onchange=async()=>{
@@ -1177,7 +1177,7 @@ $("chatPhotoInput").onchange=async()=>{
  const button=$("chatPhotoButton");button.disabled=true;button.textContent="Gönderiliyor…";
  try{
   const headers=await mediaAuthHeaders(),form=new FormData();form.append("photo",file);
-  const response=await fetch(MEDIA_API+"/photos",{method:"POST",headers,body:form});
+  const response=await fetch(MEDIA_FN_URL+"/upload",{method:"POST",headers,body:form});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"Fotoğraf gönderilemedi.");
   $("chatMsg").textContent="Fotoğraf gönderildi. Arkadaşların 24 saat içinde bir kez görüntüleyebilir.";
   await loadChatPhotos();
