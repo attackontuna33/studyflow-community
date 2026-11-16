@@ -49,6 +49,37 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 .ags-time-unit{background:#10142999;border:1px solid #ffffff18;border-radius:11px;padding:11px 6px;text-align:center}
 .ags-time-number{font-size:clamp(23px,4vw,34px);font-weight:850;font-variant-numeric:tabular-nums}
 .ags-time-label{font-size:10px;letter-spacing:1px;color:#c4c9ee;margin-top:3px}
+
+/* StudyFlow weekly planner visual identity */
+.planner-hero{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:24px;min-height:225px;padding:30px 34px;border:1px solid #514b91;border-radius:22px;background:radial-gradient(circle at 82% 35%,#5547a4 0,transparent 30%),linear-gradient(118deg,#242044 0%,#202d54 58%,#163b58 100%);box-shadow:0 18px 45px #080b1d66}
+.planner-hero-copy{position:relative;z-index:1;max-width:620px}.planner-eyebrow,.planner-overline{font-size:10px;font-weight:800;letter-spacing:1.7px;color:#aaa0ff}
+.planner-hero h2{font-size:clamp(25px,4vw,38px);line-height:1.1;margin:13px 0 8px;letter-spacing:-1px}.planner-hero p{margin:0;color:#c5c9e5;font-size:14px;max-width:470px}
+.planner-hero-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.planner-hero-controls button{padding:9px 13px;font-size:12px}
+.planner-hero-mark{position:relative;width:190px;height:155px;flex:0 0 190px;display:grid;place-items:center}
+.planner-orbit{position:absolute;border:1px solid #c9c0ff55;border-radius:50%;transform:rotate(-25deg)}.orbit-one{width:155px;height:88px}.orbit-two{width:115px;height:145px;transform:rotate(55deg)}
+.planner-hero-symbol{width:76px;height:76px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(145deg,#a99aff,#5d8cf7);font-size:40px;color:white;box-shadow:0 12px 35px #090d2d88}
+.planner-hero-mark>span{position:absolute;bottom:0;font-size:8px;letter-spacing:1.5px;color:#c7c7ed}
+.planner-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0}
+.planner-stat{display:flex;align-items:center;gap:14px;padding:17px 19px;background:linear-gradient(145deg,#1c2039,#171a30);border:1px solid #303653;border-radius:16px;min-width:0}
+.planner-stat-icon{width:43px;height:43px;flex:0 0 43px;border-radius:13px;display:grid;place-items:center;background:#39336a;color:#c6baff;font-size:21px}
+.planner-stat:nth-child(2) .planner-stat-icon{background:#17463f;color:#76e2bd}.planner-stat:nth-child(3) .planner-stat-icon{background:#263f65;color:#8dbaff}
+.planner-stat small{display:block;color:#9da5c8;font-size:9px;letter-spacing:1px;font-weight:800}.planner-stat strong{display:block;font-size:24px;line-height:1.3;margin:2px 0;font-variant-numeric:tabular-nums}.planner-stat em{font-style:normal;color:#858eaf;font-size:11px}
+.planner-week-panel,.planner-form-panel,.planner-tasks-panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:21px}
+.planner-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}.planner-section-head h3{font-size:19px;margin:4px 0 0}.planner-date-range{font-size:11px;color:#c8c4f4;background:#302c55;border:1px solid #494278;border-radius:30px;padding:7px 12px}
+.planner-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px}
+.planner-day{position:relative;min-width:0;min-height:128px;padding:13px 8px;border:1px solid #343a5b;border-radius:14px;background:linear-gradient(160deg,#222744,#1a1e35);color:var(--text);text-align:left;transition:transform .18s,border-color .18s,background .18s}
+.planner-day:hover{transform:translateY(-2px);border-color:#8274db}.planner-day.active{border-color:#9384ff;background:linear-gradient(155deg,#413878,#293d69);box-shadow:0 8px 22px #080b1d55}
+.planner-day.today:not(.active){border-color:#5c86bb}.planner-day-name{display:block;color:#aab0d0;font-size:10px;font-weight:800;letter-spacing:1px}.planner-day-number{display:block;font-size:25px;font-weight:800;margin:8px 0 11px}.planner-day-count{display:block;font-size:10px;color:#c1c6e2}.planner-day-minutes{display:block;font-size:10px;color:#8f9ed1;margin-top:4px}.planner-day-dot{position:absolute;top:15px;right:12px;width:6px;height:6px;border-radius:50%;background:#8b75f5}
+.planner-lower{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.4fr);gap:14px;margin-top:14px;align-items:start}
+.planner-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.planner-form-grid label{margin-top:8px}.planner-form-grid label span{color:#7e86a7}
+.planner-full{grid-column:1/-1}.planner-duration{display:flex;align-items:center;gap:10px}.planner-duration input{flex:1}.planner-duration span{font-size:12px;color:#9ba1c2}
+.planner-add-button{width:100%;margin-top:17px;padding:12px}.planner-plus,.planner-agenda-icon{width:35px;height:35px;display:grid;place-items:center;border-radius:11px;background:#34305d;color:#c5baff;font-size:19px}
+.planner-tasks-panel #dayPlans .row{padding:13px 0}.planner-task-subject{display:flex;align-items:center;gap:8px}.planner-task-subject strong{font-size:13px}.planner-task-dot{width:7px;height:7px;border-radius:50%;background:#8d7cf6;flex:0 0 7px}.planner-task-meta{font-size:11px;color:#9ba1c2;margin-top:5px}
+.planner-task-actions{display:flex;gap:6px;flex-wrap:wrap}.planner-task-actions button{padding:7px 9px;font-size:10px}
+.planner-footnote{margin:12px 2px 0;color:#777f9f;font-size:11px}
+@media(max-width:850px){.planner-hero-mark{width:130px;flex-basis:130px}.planner-days{gap:6px}.planner-day{min-height:116px;padding:10px 6px}.planner-lower{grid-template-columns:1fr}}
+@media(max-width:620px){.planner-hero{padding:23px 18px;min-height:0}.planner-hero-mark{display:none}.planner-hero h2{font-size:28px}.planner-hero-controls{gap:6px}.planner-hero-controls button{font-size:10px;padding:8px 9px}.planner-summary{gap:7px}.planner-stat{padding:11px 8px;gap:7px;align-items:flex-start;flex-direction:column}.planner-stat-icon{width:31px;height:31px;flex-basis:31px;font-size:16px;border-radius:9px}.planner-stat strong{font-size:17px}.planner-stat em{font-size:9px}.planner-stat small{font-size:8px}.planner-week-panel,.planner-form-panel,.planner-tasks-panel{padding:14px}.planner-section-head h3{font-size:17px}.planner-days{gap:4px}.planner-day{min-height:102px;padding:8px 4px;border-radius:10px}.planner-day-name{font-size:8px;letter-spacing:0}.planner-day-number{font-size:19px;margin:8px 0}.planner-day-count,.planner-day-minutes{font-size:8px}.planner-day-dot{top:9px;right:7px;width:5px;height:5px}.planner-form-grid{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
@@ -179,32 +210,39 @@ h1{font-size:25px;margin:0 0 5px}.grid{display:grid;gap:15px}.stats{grid-templat
 </section>
 
 <section class="view" id="planner">
- <div class="card" style="margin-bottom:16px">
-  <div class="subject-head"><div><div class="title" style="margin:0">Haftalık çalışma takvimin</div><div class="small">Planını oluştur, tamamladıklarını işaretle ve haftalık ilerlemeni takip et.</div></div><div class="topic-actions"><button class="secondary" id="plannerPrev">← Önceki</button><button class="secondary" id="plannerToday">Bu hafta</button><button class="secondary" id="plannerNext">Sonraki →</button></div></div>
-  <div id="plannerWeekLabel" class="pill" style="margin-top:12px">Bu hafta</div>
-  <div class="grid stats" style="margin-top:14px">
-   <div class="card"><div class="kicker">Planlanan süre</div><div class="value" id="plannedTotal">0 dk</div></div>
-   <div class="card"><div class="kicker">Tamamlanan süre</div><div class="value" id="plannedDone">0 dk</div></div>
-   <div class="card"><div class="kicker">Tamamlanan görev</div><div class="value" id="plannedCount">0/0</div></div>
+ <div class="planner-hero">
+  <div class="planner-hero-copy"><span class="planner-eyebrow">STUDYFLOW / PLANLAYICI</span><h2>Her gün biraz daha ileri.</h2><p>Hedeflerini küçük parçalara böl, haftanı planla ve ilerlemeni gör.</p>
+   <div class="planner-hero-controls"><button class="secondary" id="plannerPrev">← Önceki hafta</button><button id="plannerToday">Bugüne dön</button><button class="secondary" id="plannerNext">Sonraki hafta →</button></div>
   </div>
-  <div id="plannerDays" class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px"></div>
+  <div class="planner-hero-mark"><div class="planner-orbit orbit-one"></div><div class="planner-orbit orbit-two"></div><div class="planner-hero-symbol">✦</div><span>PLANLA · ODAKLAN · TAMAMLA</span></div>
  </div>
- <div class="card" style="margin-bottom:16px">
-  <div class="title">Yeni çalışma görevi</div>
-  <div class="formrow">
-   <div><label>Tarih</label><input id="planDate" type="date"></div>
-   <div><label>Ders</label><select id="planSubject"><option value="">Ders seç</option></select></div>
-   <div><label>Konu (isteğe bağlı)</label><select id="planTopic"><option value="">Konu seç (isteğe bağlı)</option></select></div>
-   <div><label>Hedef süre (dakika)</label><input id="planMinutes" type="number" min="5" max="1440" step="5" value="60"></div>
+ <div class="planner-summary">
+  <div class="planner-stat"><span class="planner-stat-icon">◷</span><div><small>HAFTALIK HEDEF</small><strong id="plannedTotal">0 dk</strong><em>Planlanan çalışma</em></div></div>
+  <div class="planner-stat"><span class="planner-stat-icon">✓</span><div><small>TAMAMLANAN</small><strong id="plannedDone">0 dk</strong><em>Bitirdiğin çalışma</em></div></div>
+  <div class="planner-stat"><span class="planner-stat-icon">▦</span><div><small>GÖREVLER</small><strong id="plannedCount">0/0</strong><em>Tamamlanan görev</em></div></div>
+ </div>
+ <div class="planner-week-panel">
+  <div class="planner-section-head"><div><span class="planner-overline">HAFTALIK GÖRÜNÜM</span><h3>Takvimin</h3></div><span id="plannerWeekLabel" class="planner-date-range">Bu hafta</span></div>
+  <div id="plannerDays" class="planner-days"></div>
+ </div>
+ <div class="planner-lower">
+  <div class="planner-form-panel">
+   <div class="planner-section-head"><div><span class="planner-overline">YENİ HEDEF</span><h3>Çalışma ekle</h3></div><span class="planner-plus">＋</span></div>
+   <div class="planner-form-grid">
+    <div><label>Tarih</label><input id="planDate" type="date"></div>
+    <div><label>Ders</label><select id="planSubject"><option value="">Ders seç</option></select></div>
+    <div class="planner-full"><label>Konu <span>(isteğe bağlı)</span></label><select id="planTopic"><option value="">Konu seç (isteğe bağlı)</option></select></div>
+    <div class="planner-full"><label>Hedef süre</label><div class="planner-duration"><input id="planMinutes" type="number" min="5" max="1440" step="5" value="60"><span>dakika</span></div></div>
+   </div>
+   <button id="addPlan" class="planner-add-button">＋ Takvime ekle</button>
+   <div class="small" id="planMsg" aria-live="polite"></div>
   </div>
-  <button id="addPlan" style="width:100%;margin-top:14px">Takvime ekle</button>
-  <div class="small" id="planMsg" aria-live="polite"></div>
+  <div class="planner-tasks-panel">
+   <div class="planner-section-head"><div><span class="planner-overline">GÜNLÜK AJANDA</span><h3 id="selectedDayTitle">Günün görevleri</h3></div><span class="planner-agenda-icon">☷</span></div>
+   <div id="dayPlans" class="empty">Görevler yükleniyor…</div>
+  </div>
  </div>
- <div class="card">
-  <div class="title" id="selectedDayTitle">Günün görevleri</div>
-  <div id="dayPlans" class="empty">Görevler yükleniyor…</div>
- </div>
- <div class="notice">Çalışma planların yalnızca kendi hesabında saklanır. Planı tamamlandı olarak işaretlemek kronometre kayıtlarından bağımsızdır.</div>
+ <div class="planner-footnote">Planların yalnızca kendi hesabında saklanır. Görevleri tamamlamak kronometre kayıtlarından bağımsızdır.</div>
 </section>
 
 <section class="view" id="account">
@@ -567,13 +605,13 @@ function renderPlanner(){
  const names=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
  $("plannerDays").innerHTML=names.map((name,i)=>{
   const d=shiftDate(plannerWeekStart,i),key=dateKey(d),rows=plannerRows.filter(p=>p.plan_date===key),minutes=rows.reduce((a,p)=>a+Number(p.planned_minutes||0),0),active=key===plannerSelectedDate;
-  return '<button type="button" class="'+(active?'':'secondary')+'" data-planner-day="'+key+'" style="padding:10px 4px;min-width:0;background:'+(active?'linear-gradient(100deg,var(--purple),var(--blue))':'#303653')+'"><span style="display:block;font-size:11px">'+name+'</span><strong style="display:block;font-size:18px;margin:5px 0">'+d.getDate()+'</strong><span style="display:block;font-size:10px">'+rows.length+' görev</span><span style="display:block;font-size:10px;color:#c4c9ee">'+minutes+' dk</span></button>';
+  return '<button type="button" class="planner-day '+(active?'active ':'')+(key===dateKey(new Date())?'today':'')+'" data-planner-day="'+key+'"><span class="planner-day-name">'+name+'</span><strong class="planner-day-number">'+d.getDate()+'</strong>'+(rows.length?'<i class="planner-day-dot"></i>':'')+'<span class="planner-day-count">'+rows.length+' görev</span><span class="planner-day-minutes">'+minutes+' dk</span></button>';
  }).join("");
  document.querySelectorAll("[data-planner-day]").forEach(b=>b.onclick=()=>{plannerSelectedDate=b.dataset.plannerDay;$("planDate").value=plannerSelectedDate;renderPlanner();});
  const chosen=parseLocalDate(plannerSelectedDate);
  $("selectedDayTitle").textContent="Görevler · "+chosen.toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long"});
  const rows=plannerRows.filter(p=>p.plan_date===plannerSelectedDate);
- $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong><div class="small">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="topic-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
+ $("dayPlans").innerHTML=rows.map(p=>'<div class="row"><div class="grow"><div class="planner-task-subject"><i class="planner-task-dot"></i><strong style="'+(p.completed?'text-decoration:line-through;opacity:.65':'')+'">'+escapeHtml(p.subject)+'</strong></div><div class="planner-task-meta">'+escapeHtml(p.topic||"Konu belirtilmedi")+' · '+Number(p.planned_minutes)+' dakika · '+(p.completed?'Tamamlandı':'Bekliyor')+'</div></div><div class="planner-task-actions"><button class="secondary" data-plan-toggle="'+p.id+'">'+(p.completed?'Geri al':'Tamamla')+'</button><button class="danger" data-plan-delete="'+p.id+'">Sil</button></div></div>').join("")||'<div class="empty">Bu gün için henüz görev yok. Yukarıdan bir çalışma ekleyebilirsin.</div>';
  document.querySelectorAll("[data-plan-toggle]").forEach(b=>b.onclick=()=>togglePlan(b.dataset.planToggle));
  document.querySelectorAll("[data-plan-delete]").forEach(b=>b.onclick=()=>deletePlan(b.dataset.planDelete));
 }
