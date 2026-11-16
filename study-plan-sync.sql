@@ -2,7 +2,7 @@
 -- Run once in Supabase SQL Editor after the study_plans table exists.
 
 alter table public.study_sessions
-  add column if not exists plan_id uuid references public.study_plans(id) on delete cascade;
+  add column if not exists plan_id bigint references public.study_plans(id) on delete cascade;
 
 create index if not exists study_sessions_plan_id_idx
   on public.study_sessions(plan_id) where plan_id is not null;
@@ -39,7 +39,7 @@ for each row execute procedure public.remove_daily_study_stats();
 
 -- Atomically completes a plan, adding only the time not already recorded
 -- against that plan. Safe against repeated taps.
-create or replace function public.complete_study_plan(p_plan_id uuid)
+create or replace function public.complete_study_plan(p_plan_id bigint)
 returns void
 language plpgsql
 security definer
@@ -76,6 +76,6 @@ begin
 end;
 $$;
 
-grant execute on function public.complete_study_plan(uuid) to authenticated;
+grant execute on function public.complete_study_plan(bigint) to authenticated;
 
 grant select, insert, delete on public.study_sessions to authenticated;
